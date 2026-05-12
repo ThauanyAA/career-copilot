@@ -1,43 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { AnalysisResult } from "@/types/analysis";
+import { AnalysisRequest, AnalysisResultSchema } from "@/types/analysis";
+import { JobAnalysisService } from "@/ai/services/jobAnalysisService";
 
 const AnalysisRequestSchema = z.object({
   resumeContent: z.string().min(1, "Resume content is required"),
   jobDescription: z.string().min(1, "Job description is required"),
 });
 
-function getMockAnalysisResult(): AnalysisResult {
-  return {
-    matchScore: 78,
-    strengths: [
-      "Strong technical background matching core requirements",
-      "Relevant project experience with similar tech stack",
-      "Experience with agile methodologies",
-      "Proven leadership in team environments",
-    ],
-    missingSkills: [
-      "Docker containerization",
-      "Kubernetes orchestration",
-      "Cloud infrastructure design",
-      "Advanced system architecture patterns",
-    ],
-    suggestedAnswer:
-      "Your profile shows a strong alignment with the role. To strengthen your candidacy, consider deepening your knowledge in containerization and cloud infrastructure, as these are key requirements mentioned in the job description. Highlight any experience with scalable system design and performance optimization in your interview preparation.",
-  };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const validatedData = AnalysisRequestSchema.parse(body);
+    const validatedData = AnalysisRequestSchema.parse(
+      body
+    ) as AnalysisRequest;
 
-    // TODO: Replace with actual AI analysis logic
-    // For now, return mock data
-    const result = getMockAnalysisResult();
+    // Use real job analysis service
+    const jobAnalysisService = new JobAnalysisService();
+    const result = await jobAnalysisService.analyzeJobMatch(validatedData);
 
-    return NextResponse.json(result);
+    // Validate response matches schema
+    const validatedResult = AnalysisResultSchema.parse(result);
+
+    return NextResponse.json(validatedResult);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -46,8 +32,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.error("Analysis error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to analyze job match. Please try again." },
       { status: 500 }
     );
   }

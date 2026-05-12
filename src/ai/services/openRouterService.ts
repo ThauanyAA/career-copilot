@@ -2,7 +2,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { config, type ModelConfig } from '../config';
 import { SystemMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 import { createAgent, providerStrategy } from 'langchain';
-import { getMCPTools } from './mcpService.js';
+import { getMCPTools } from './mcpService';
 import { z } from 'zod/v3';
 import { type ChatGeneration } from '@langchain/core/outputs';
 
