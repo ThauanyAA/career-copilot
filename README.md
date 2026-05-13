@@ -239,7 +239,7 @@ Responsible for:
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24
 - npm / pnpm / yarn
 - OpenRouter API key
 
