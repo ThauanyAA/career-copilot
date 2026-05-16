@@ -4,6 +4,20 @@ interface ResultCardProps {
   variant?: "score" | "list" | "text";
 }
 
+function sanitizeListItems(items: string[]): string[] {
+  return items
+    .filter((item): item is string => {
+      // Keep only non-empty strings after trimming
+      return typeof item === "string" && item.trim().length > 0;
+    })
+    .map((item) => item.trim())
+    .filter((item) => {
+      // Filter out common malformed patterns
+      // Exclude items that are just punctuation or special characters
+      return /[a-zA-Z0-9]/.test(item);
+    });
+}
+
 export function ResultCard({
   title,
   content,
@@ -22,12 +36,12 @@ export function ResultCard({
       {variant === "list" && (
         <ul className="space-y-2">
           {Array.isArray(content) &&
-            content.map((item, idx) => (
+            sanitizeListItems(content).map((item, idx) => (
               <li
                 key={idx}
                 className="flex gap-2 text-sm text-zinc-700 dark:text-zinc-300"
               >
-                <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-600" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-600" />
                 <span>{item}</span>
               </li>
             ))}

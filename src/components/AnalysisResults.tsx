@@ -32,9 +32,17 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
           variant="list"
         />
         <ResultCard
-          title="Suggested Answer"
-          content={result.suggestedAnswer}
+          title="Strategic Summary"
+          content={result.quickSummary}
           variant="text"
+        />
+      </div>
+
+      <div>
+        <ResultCard
+          title="Recommended Actions"
+          content={result.improvementActions}
+          variant="list"
         />
       </div>
     </div>

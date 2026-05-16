@@ -22,10 +22,8 @@ export const config: ModelConfig = {
   httpReferer: '',
   xTitle: 'IA Devs - Transforming Services into Tools',
   models: [
+    'qwen/qwen3-235b-a22b-2507',
     // 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-    'nvidia/nemotron-3-super-120b-a12b:free',
-    // 'tencent/hy3-preview:free'
-    // 'openai/gpt-chat-latest'
   ],
   provider: {
     sort: {

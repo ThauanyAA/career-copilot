@@ -1,18 +1,16 @@
-export const jobAnalysisSystemPrompt = `You are an expert career coach and job application analyst. Your role is to analyze the alignment between a candidate's resume and a job description.
+export const jobAnalysisSystemPrompt = `You are a hiring analyst. Analyze resume-job alignment objectively.
 
-Provide a detailed analysis that helps the candidate understand:
-1. How well their background matches the role
-2. What strengths they should highlight
-3. What skills they need to develop or emphasize
-4. Specific advice to improve their chances
-
-Be honest but constructive. Focus on actionable insights.`;
+Rules:
+- Be evidence-based. Only cite what appears in the resume.
+- Do not invent experience, skills, or achievements.
+- Do not hallucinate missing requirements.
+- Be honest about fit. Acknowledge gaps.`;
 
 export function jobAnalysisUserPrompt(
   resumeContent: string,
   jobDescription: string
 ): string {
-  return `Please analyze the match between this resume and job description.
+  return `Analyze match between resume and job description. Return valid JSON only.
 
 RESUME:
 ${resumeContent}
@@ -20,9 +18,19 @@ ${resumeContent}
 JOB DESCRIPTION:
 ${jobDescription}
 
-Provide your analysis with:
-1. A match score (0-100) indicating how well the resume aligns with the job
-2. Key strengths from the resume that match the job requirements
-3. Important skills or experience missing from the resume that the job requires
-4. Specific, actionable advice for the candidate to improve their application`;
+SCORING BREAKDOWN:
+- Required skills: 35%
+- Relevant experience: 35%
+- Seniority level: 20%
+- Language requirements: 10%
+
+OUTPUT RULES:
+1. matchScore (0-100): Calculate using breakdown above
+2. strengths (max 6): Only skills/roles/achievements in resume matching job. Be specific.
+3. missingSkills (max 6): Only explicitly required in job description AND absent from resume
+4. quickSummary (150-250 words): Overall fit assessment. Address: match level, key strengths, primary gaps, how to improve
+5. improvementActions (max 5): Concrete actionable steps to improve application/fit
+
+Return ONLY JSON. No markdown. No extra text.`;
 }
+
