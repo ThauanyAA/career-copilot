@@ -69,6 +69,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      reusable_answers: {
+        Row: {
+          id: string;
+          user_id: string;
+          label: string;
+          category: Database["public"]["Enums"]["reusable_answer_category"];
+          question: string;
+          answer: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          label: string;
+          category?: Database["public"]["Enums"]["reusable_answer_category"];
+          question: string;
+          answer: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          label?: string;
+          category?: Database["public"]["Enums"]["reusable_answer_category"];
+          question?: string;
+          answer?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -76,8 +109,22 @@ export type Database = {
         Args: Record<string, never>;
         Returns: unknown;
       };
+      set_reusable_answers_updated_at: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
     };
-    Enums: Record<string, never>;
+    Enums: {
+      reusable_answer_category:
+        | "salary_expectation"
+        | "notice_period"
+        | "work_authorization"
+        | "relocation"
+        | "availability"
+        | "motivation"
+        | "experience_summary"
+        | "custom";
+    };
     CompositeTypes: Record<string, never>;
   };
 };
