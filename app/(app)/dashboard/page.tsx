@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { logout } from "../actions";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
@@ -6,7 +7,7 @@ export default async function DashboardPage() {
   const { data, error } = await supabase.auth.getClaims();
 
   if (error || !data?.claims) {
-    redirect("/");
+    redirect("/login");
   }
 
   const email =
@@ -27,9 +28,19 @@ export default async function DashboardPage() {
           Supabase authentication is wired for this protected area. Candidate
           memory features will be added in the next phase.
         </p>
-        <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">
-          Signed in as {email}
-        </p>
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Signed in as {email}
+          </p>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            >
+              Log out
+            </button>
+          </form>
+        </div>
       </div>
     </main>
   );
