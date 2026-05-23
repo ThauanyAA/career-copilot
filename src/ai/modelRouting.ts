@@ -54,11 +54,11 @@ const models = {
   },
 } satisfies Record<string, ModelOption>;
 
-const allowedCostClassesByTier = {
+const allowedCostClassesByTier: Record<UserTier, readonly ModelCostClass[]> = {
   free: ["free"],
   starter: ["free", "cheap_paid"],
   pro: ["free", "cheap_paid", "strong_paid"],
-} satisfies Record<UserTier, ModelCostClass[]>;
+};
 
 function canUseModel(userTier: UserTier, model: ModelOption) {
   return allowedCostClassesByTier[userTier].includes(model.costClass);
