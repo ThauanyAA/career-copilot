@@ -35,34 +35,19 @@ export class JobAnalysisService {
     const llmEndTime = performance.now();
     console.log(`[TIMING] LLM call completed (${(llmEndTime - startTime).toFixed(2)}ms elapsed)`);
 
-    // Handle response data
+    const parseStartTime = performance.now();
+    console.log(`[DEBUG] Response data:`, response.data);
+
+    if (!response.data) {
+      throw new Error("No analysis data returned from LLM service");
+    }
+
     let analysisResult: AnalysisResult;
 
-    const parseStartTime = performance.now();
-    console.log(`[DEBUG] Response.data type: ${typeof response.data}, value:`, response.data);
-
-    if (typeof response.data === "string") {
-      // If response is string, it's a fallback - parse it as JSON
-      try {
-        console.log(`[DEBUG] Attempting to parse string of length: ${response.data.length}`);
-        const parsed = JSON.parse(response.data);
-        console.log(`[DEBUG] JSON parsed successfully, keys:`, Object.keys(parsed || {}));
-        analysisResult = AnalysisResultSchema.parse(parsed);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error(`[DEBUG] Parse error: ${errorMsg}`);
-        console.error(`[DEBUG] Response data type:`, typeof response.data);
-        throw new Error(`Failed to parse analysis result: ${errorMsg}`);
-      }
-    } else if (response.data) {
-      // If response is already structured object
-      try {
-        analysisResult = AnalysisResultSchema.parse(response.data);
-      } catch {
-        throw new Error("Failed to validate analysis result structure");
-      }
-    } else {
-      throw new Error("No analysis data returned from LLM service");
+    try {
+      analysisResult = AnalysisResultSchema.parse(response.data);
+    } catch {
+      throw new Error("Failed to validate analysis result structure");
     }
 
     const parseEndTime = performance.now();
