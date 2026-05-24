@@ -1,7 +1,7 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { ApplicationPrepGraphStateSchema } from "@/types/applicationPrep";
 import { estimateComplexity } from "./nodes/estimateComplexity";
-import { generateApplicationPrepStub } from "./nodes/generateApplicationPrepStub";
+import { generateApplicationPrep } from "./nodes/generateApplicationPrep";
 import { loadCandidateContext } from "./nodes/loadCandidateContext";
 import { resolveModelRoute } from "./nodes/resolveModelRoute";
 import { selectRelevantReusableAnswers } from "./nodes/selectRelevantReusableAnswers";
@@ -16,7 +16,7 @@ export function buildApplicationPrepGraph() {
     .addNode("selectRelevantReusableAnswers", selectRelevantReusableAnswers)
     .addNode("estimateComplexity", estimateComplexity)
     .addNode("resolveModelRoute", resolveModelRoute)
-    .addNode("generateApplicationPrepStub", generateApplicationPrepStub)
+    .addNode("generateApplicationPrep", generateApplicationPrep)
     .addNode("validateResult", validateResult)
     .addEdge(START, "validateInput")
     .addConditionalEdges("validateInput", routeByError, {
@@ -37,9 +37,9 @@ export function buildApplicationPrepGraph() {
     })
     .addConditionalEdges("resolveModelRoute", routeByError, {
       stop: END,
-      continue: "generateApplicationPrepStub",
+      continue: "generateApplicationPrep",
     })
-    .addConditionalEdges("generateApplicationPrepStub", routeByError, {
+    .addConditionalEdges("generateApplicationPrep", routeByError, {
       stop: END,
       continue: "validateResult",
     })
