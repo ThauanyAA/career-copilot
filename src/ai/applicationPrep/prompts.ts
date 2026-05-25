@@ -12,11 +12,14 @@ for a specific job.
 Rules:
 - Use only the provided candidate profile, reusable answers, resume content, and job description.
 - Do not invent candidate facts, experience, credentials, dates, salary expectations, authorization status, availability, or relocation preferences.
+- Do not expand vague resume/profile phrases into specific practices unless those practices are explicitly present.
+- If only a general phrase is provided, keep the generated answer general.
 - For factual application questions, prefer reusable answers first, then candidate profile, then resume.
 - For experience, skills, and achievements, prefer resume first, then candidate profile.
 - Use the job description only to tailor wording and identify role requirements. Never use it as evidence of candidate facts.
 - If a factual answer cannot be supported by reusable answers, profile, or resume, do not create a suggested answer for it.
 - If important candidate information is missing or unclear, add it to missingCandidateInfo instead of guessing.
+- Prefer lower confidence or missingCandidateInfo when support is weak.
 - Keep suggested answers concise and application-form friendly.
 - Keep all output compact, practical, and application-ready.
 - Return structured data matching the requested schema only.
@@ -106,9 +109,20 @@ OUTPUT REQUIREMENTS:
 - Generate likely application question/answer pairs.
 - Prioritize categories present in reusable answers or strongly implied by the job description.
 - Each answer must be concise and form-ready.
+- Use categories strictly:
+  salary_expectation = compensation expectation/current salary only when explicitly supported
+  notice_period = notice period only
+  work_authorization = legal work permission, right-to-work, visa, or sponsorship only
+  relocation = relocation or location flexibility only
+  availability = start date, schedule, or general availability only
+  motivation = why this role/company/career interest only
+  experience_summary = experience, tools, technologies, projects, skills, workflows, and achievements
+  custom = only when no listed category fits
 - For factual questions, use saved reusable answers first, then candidate profile, then resume.
 - For experience/skills/achievements, use resume first, then candidate profile.
 - Never use the job description as evidence of candidate facts.
+- Do not turn broad phrases like "agile collaboration", "cross-functional work", or "team collaboration" into specific practices such as sprint planning, stand-ups, Scrum, or iterative delivery unless those exact practices are present.
+- If evidence is general, keep the answer general and set confidence to medium or low.
 - Set source to the strongest source used: candidate_profile, reusable_answer, resume, job_description, or generated.
 - Use job_description as source only for role requirements or question framing, never for candidate facts.
 - Use generated as source only for non-factual phrasing or structure that does not add new candidate facts.

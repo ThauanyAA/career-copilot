@@ -16,6 +16,15 @@ export async function selectRelevantReusableAnswers(
       jobDescription: state.candidateContext.jobDescription,
     });
 
+    console.log("Application prep reusable answer selection diagnostics:", {
+      reusableAnswerRowCount: state.reusableAnswers?.length ?? 0,
+      selectedReusableAnswerCount: relevantReusableAnswers.length,
+      selectedReusableAnswers: relevantReusableAnswers.map((answer) => ({
+        category: answer.category,
+        label: answer.label,
+      })),
+    });
+
     return {
       candidateContext: CandidateContextSchema.parse({
         ...state.candidateContext,

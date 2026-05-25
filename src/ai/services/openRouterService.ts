@@ -4,6 +4,38 @@ import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { createAgent, providerStrategy } from 'langchain';
 import { z } from 'zod/v3';
 
+type ErrorDetails = {
+    cause?: unknown;
+    code?: string;
+    message?: string;
+    name?: string;
+    response?: {
+        data?: unknown;
+        status?: number;
+        statusText?: string;
+    };
+    status?: number;
+};
+
+function getErrorDiagnostics(error: unknown) {
+    if (error instanceof Error) {
+        const details = error as Error & ErrorDetails;
+
+        return {
+            cause: details.cause,
+            code: details.code,
+            message: details.message,
+            name: details.name,
+            responseData: details.response?.data,
+            responseStatus: details.response?.status,
+            responseStatusText: details.response?.statusText,
+            status: details.status,
+        };
+    }
+
+    return { message: String(error) };
+}
+
 export class OpenRouterService {
     private config: ModelConfig;
     private llmClient: ChatOpenAI;
@@ -53,19 +85,32 @@ export class OpenRouterService {
             new HumanMessage(userPrompt),
         ];
 
-        const data = await agent.invoke(
-            {
-                messages
-            },
-            {
-                callbacks: [{
-                    handleChatModelStart(_llm, promptMessages) {
-                        const lastMsg = promptMessages.at(-1)?.at(-1);
-                        console.log(`\n🧠 LLM thinking...`);
-                        console.log(` (last message: "${lastMsg?.content?.toString()}")`);
-                    },
-                }]
+        let data: unknown;
+
+        try {
+            data = await agent.invoke(
+                {
+                    messages
+                },
+                {
+                    callbacks: [{
+                        handleChatModelStart(_llm, promptMessages) {
+                            const lastMsg = promptMessages.at(-1)?.at(-1);
+                            console.log(`\n🧠 LLM thinking...`);
+                            console.log(` (last message: "${lastMsg?.content?.toString()}")`);
+                        },
+                    }]
+                });
+        } catch (error) {
+            console.error('OpenRouter structured call failed:', {
+                models: this.config.models,
+                maxTokens: this.config.maxTokens,
+                temperature: this.config.temperature,
+                error: getErrorDiagnostics(error),
             });
+            throw error;
+        }
+
         console.log('✅ LLM Response:', JSON.stringify(data, null, 2));
 
         return {
