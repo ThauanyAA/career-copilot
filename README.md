@@ -1,4 +1,4 @@
-# Career Copilot 🚀
+# Career Copilot
 
 > AI-powered job application assistant focused on reducing repetitive application work with candidate memory, reusable answers, and structured AI workflows.
 
@@ -6,7 +6,6 @@
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue)
 ![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres-green)
-![LangChain](https://img.shields.io/badge/LangChain-AI-green)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Orchestration-purple)
 ![OpenRouter](https://img.shields.io/badge/OpenRouter-LLM-orange)
 
@@ -14,57 +13,60 @@
 
 ## Overview
 
-Career Copilot started as an AI Job Match Analyzer and is evolving into a persistent job application assistant.
+Career Copilot is an AI-powered assistant for job applications. It started as a Job Match Analyzer and is evolving into a protected workspace where candidates can keep profile memory, save reusable answers, analyze role fit, and generate application preparation materials from structured AI workflows.
 
-The product goal is to help candidates reduce job application friction by:
+The product goal is to help candidates reduce application friction by:
 
-- analyzing resume/job alignment;
-- storing candidate profile memory;
-- saving reusable answers for repetitive application questions;
-- preparing candidates for applications with AI-generated guidance;
-- eventually assisting with application workflows and automation.
+- analyzing resume and job description alignment;
+- storing candidate profile context;
+- reusing answers for repetitive application questions;
+- generating tailored application prep from profile, reusable answers, resume, and job description;
+- eventually supporting application history, resume context optimization, and assisted workflows.
 
-This project is also part of my postgraduate learning journey, applying concepts from AI engineering, LangChain/LangGraph, structured outputs, Supabase, and product-oriented software architecture.
+This project is also part of a practical postgraduate learning journey in AI engineering, structured outputs, LangGraph workflows, Supabase, and product-oriented software architecture.
 
 ---
 
 ## Current Project Phase
 
-🚧 **Active development — MVP foundation + AI Application Prep groundwork**
+Active development: authenticated MVP foundation plus Application Prep v1.
 
 ### Implemented
 
-- Public AI Job Match Analyzer on `/`.
-- Protected authenticated workspace under `(app)` routes.
-- Supabase authentication with SSR session handling.
-- Protected routes and logout flow.
+- Public Job Match Analyzer on `/`.
+- Supabase Auth with SSR session handling.
+- Protected app shell under `(app)` routes.
 - Candidate profile persistence with Row Level Security.
 - Reusable application answers with categories and CRUD.
-- Authenticated navigation/dashboard.
-- Protected analyzer workspace on `/applications/new`.
-- Structured AI output validation with Zod.
-- OpenRouter integration for the existing job analysis flow.
-- Cost-aware deterministic model routing layer.
-- Application Prep contracts and deterministic helper functions.
-
-### In progress / not wired yet
-
-- LangGraph-based Application Prep workflow.
-- Application Prep API endpoint and UI result rendering.
-- Persisting generated application prep/history.
-- Resume storage/versioning.
+- Authenticated dashboard/navigation/logout flow.
+- Protected New Application workflow on `/applications/new`.
+- Shared New Application inputs with two paths:
+  - analyze fit first;
+  - prepare application now.
+- Existing match analysis API at `POST /api/analyze`.
+- Application Prep API at `POST /api/applications/prep`.
+- Deterministic LangGraph Application Prep workflow.
+- Application Prep uses authenticated profile, reusable answers, pasted resume, and pasted job description.
+- Application Prep uses one structured LLM generation call.
+- Zod validation for API inputs, AI outputs, and graph state.
+- OpenRouter integration through a shared structured-output service.
+- Cost-aware deterministic model routing in `src/ai/modelRouting.ts`.
 
 ### Not implemented yet
 
-- Browser automation / autofill agent.
-- Billing / paid plans.
+- Persisted application prep/history.
+- Application tracking dashboard.
+- Resume storage/versioning.
+- Resume/job-description summarization or cache.
 - Streaming responses.
+- Browser automation/autofill.
 - PDF resume parsing.
 - Job URL scraping.
+- Billing, quotas, or paid plan enforcement.
 
 ---
 
-## Core User Flow Today
+## Core User Flows Today
 
 ### Public analyzer
 
@@ -82,17 +84,30 @@ User signs up/logs in
   -> accesses dashboard
   -> completes candidate profile
   -> saves reusable application answers
-  -> opens New Application / Analyzer
-  -> runs the current job match analyzer inside the protected app
+  -> opens /applications/new
+  -> pastes resume + job description once
+  -> chooses Analyze Fit First or Prepare Application Now
+```
+
+### Application Prep
+
+```text
+POST /api/applications/prep
+  -> authenticates with Supabase
+  -> loads candidate profile
+  -> loads reusable answers
+  -> invokes deterministic LangGraph workflow
+  -> validates structured Application Prep result
+  -> returns application-ready sections to the UI
 ```
 
 ---
 
 ## Main Features
 
-### 1. AI Job Match Analyzer
+### 1. Job Match Analyzer
 
-The initial AI feature compares pasted resume content against a pasted job description and returns:
+Compares pasted resume content against a pasted job description and returns:
 
 - match score;
 - strengths;
@@ -100,16 +115,16 @@ The initial AI feature compares pasted resume content against a pasted job descr
 - quick summary;
 - improvement actions.
 
-This flow is currently synchronous and uses OpenRouter through the existing AI service layer.
+Available both on the public home page and inside the authenticated New Application workflow.
 
 ### 2. Candidate Profile Memory
 
-Authenticated users can maintain a persistent candidate profile containing information such as:
+Authenticated users can maintain profile context including:
 
 - name;
 - headline;
 - location;
-- links;
+- LinkedIn, GitHub, and portfolio links;
 - target roles;
 - skills;
 - salary expectation;
@@ -118,11 +133,11 @@ Authenticated users can maintain a persistent candidate profile containing infor
 - English level;
 - relocation preference.
 
-The goal is to make future AI workflows reuse known candidate context instead of asking the user to repeat the same information.
+This context is loaded by Application Prep so the user does not need to repeat stable candidate facts every time.
 
 ### 3. Reusable Answers
 
-Users can save common application answers by category, such as:
+Users can save common application answers by category:
 
 - salary expectation;
 - notice period;
@@ -131,21 +146,32 @@ Users can save common application answers by category, such as:
 - availability;
 - motivation;
 - experience summary;
-- custom answers.
+- custom.
 
-These answers will later be reused by AI Application Prep to generate better, more consistent application responses.
+Application Prep deterministically selects relevant saved answers based on the pasted resume and job description before making the LLM call.
 
-### 4. AI Application Prep Groundwork
+### 4. Application Prep
 
-The next AI phase is being prepared with:
+Application Prep generates practical materials for a specific application:
 
-- compact Zod contracts;
-- deterministic model routing;
-- candidate context assembly;
-- reusable answer selection;
-- complexity estimation.
+- fit summary;
+- tailored pitch;
+- suggested application answers;
+- missing candidate information;
+- application risks;
+- prep checklist.
 
-The intended v1 workflow is a deterministic LangGraph flow with only one LLM generation node to control cost and complexity.
+The v1 workflow is intentionally deterministic and cost controlled:
+
+- validate request;
+- load candidate context;
+- select reusable answers without an LLM;
+- estimate complexity;
+- resolve model route;
+- make one structured LLM generation call;
+- validate the result.
+
+No persistence, streaming, or browser automation is part of v1 yet.
 
 ---
 
@@ -172,7 +198,7 @@ The intended v1 workflow is a deterministic LangGraph flow with only one LLM gen
 - LangChain
 - LangGraph
 - Zod structured output validation
-- Deterministic model routing for cost control
+- Deterministic model routing
 
 ### Tooling
 
@@ -185,42 +211,43 @@ The intended v1 workflow is a deterministic LangGraph flow with only one LLM gen
 
 ## Architecture
 
-### Current high-level flow
+### High-level application flow
 
 ```text
-UI / App Router
+Next.js App Router
   -> Server Components / Client Components
-  -> Server Actions / API Routes
-  -> Supabase SSR client / OpenRouter services
-  -> Postgres with RLS / LLM structured output
+  -> Server Actions / Route Handlers
+  -> Supabase SSR client / AI services
+  -> Postgres with RLS / OpenRouter structured output
   -> Zod validation
   -> UI rendering
 ```
 
-### Existing AI analysis flow
+### Job analysis flow
 
 ```text
-JobMatchAnalyzer
+JobMatchAnalyzer or ApplicationPrep UI
   -> POST /api/analyze
   -> JobAnalysisService
   -> OpenRouterService
   -> LLM structured response
   -> Zod validation
-  -> UI results
+  -> AnalysisResults
 ```
 
-### Planned Application Prep flow
+### Application Prep flow
 
 ```text
-/applications/new
-  -> pasted resume + job description
-  -> load authenticated candidate context
-  -> select reusable answers deterministically
-  -> estimate complexity
-  -> resolve model route
+ApplicationPrep UI
+  -> POST /api/applications/prep
+  -> Supabase auth check
+  -> candidate_profiles + reusable_answers queries
   -> LangGraph Application Prep workflow
-  -> one structured LLM generation call
-  -> validated Application Prep result
+  -> deterministic context/reusable-answer selection
+  -> model route resolution
+  -> one OpenRouter structured generation call
+  -> Zod validation
+  -> Application Prep result sections
 ```
 
 ---
@@ -241,19 +268,28 @@ career-copilot/
 │   │       └── new/
 │   ├── api/
 │   │   ├── analyze/
-│   │   └── applications/        # planned Application Prep endpoint area
+│   │   └── applications/
+│   │       └── prep/
 │   ├── auth/
 │   │   └── callback/
+│   ├── layout.tsx
 │   └── page.tsx
 │
 ├── src/
 │   ├── ai/
 │   │   ├── applicationPrep/
-│   │   ├── graph/
+│   │   │   ├── nodes/
+│   │   │   ├── graph.ts
+│   │   │   ├── context.ts
+│   │   │   ├── prompts.ts
+│   │   │   └── reusableAnswerSelector.ts
 │   │   ├── prompts/
 │   │   ├── services/
 │   │   └── modelRouting.ts
 │   ├── components/
+│   │   ├── ApplicationPrep.tsx
+│   │   ├── JobMatchAnalyzer.tsx
+│   │   └── AnalysisResults.tsx
 │   ├── lib/
 │   │   └── supabase/
 │   └── types/
@@ -327,29 +363,29 @@ Create a local environment file:
 cp .env.example .env.local
 ```
 
-If `.env.example` is not available in your local checkout, create `.env.local` manually:
+Required values:
 
 ```env
-OPENROUTER_API_KEY=your_openrouter_api_key
-
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 
-# Optional model routing overrides
+OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_DEFAULT_MODEL=qwen/qwen3-235b-a22b-2507
 OPENROUTER_FREE_MODEL=nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
 OPENROUTER_CHEAP_MODEL=qwen/qwen3-235b-a22b-2507
 OPENROUTER_STRONG_MODEL=qwen/qwen3-235b-a22b-2507
 ```
 
-Do **not** commit `.env.local`.
+Optional LangSmith tracing values are listed in `.env.example`.
 
-### 5. Configure Supabase
+Do not commit `.env` or `.env.local`.
+
+### 5. Configure Supabase Auth
 
 Create a Supabase project and copy:
 
-- Project URL → `NEXT_PUBLIC_SUPABASE_URL`
-- Publishable/Anon key → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- Project URL -> `NEXT_PUBLIC_SUPABASE_URL`
+- Publishable/Anon key -> `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
 In Supabase Auth settings, add the local redirect URL:
 
@@ -357,7 +393,7 @@ In Supabase Auth settings, add the local redirect URL:
 http://localhost:3000/auth/callback
 ```
 
-For production/deployment, also add your deployed domain callback URL:
+For production/deployment, also add your deployed callback URL:
 
 ```text
 https://your-domain.com/auth/callback
@@ -381,7 +417,7 @@ supabase db push
 
 Or paste/run the migration SQL files in the Supabase SQL Editor in timestamp order.
 
-Required current tables:
+Current required tables:
 
 - `candidate_profiles`
 - `reusable_answers`
@@ -417,7 +453,14 @@ http://localhost:3000
 /dashboard             Authenticated dashboard
 /profile               Candidate profile memory
 /answers               Reusable application answers
-/applications/new      Protected analyzer workspace
+/applications/new      New Application workflow
+```
+
+### API
+
+```text
+POST /api/analyze              Job match analysis
+POST /api/applications/prep    Application Prep
 ```
 
 ---
@@ -429,9 +472,8 @@ npm run dev      # Start development server
 npm run build    # Build for production
 npm run start    # Start production server
 npm run lint     # Run ESLint
+npx tsc --noEmit # Run TypeScript check
 ```
-
-Known note: some repo-wide checks may still surface older out-of-scope issues while the MVP is evolving. Focused lint has been used during incremental feature work.
 
 ---
 
@@ -447,11 +489,13 @@ Protected by RLS using:
 user_id = auth.uid()
 ```
 
+Stores stable candidate context used by Application Prep.
+
 ### `reusable_answers`
 
 User-owned library of common application answers.
 
-Categories include:
+Categories:
 
 ```text
 salary_expectation
@@ -468,40 +512,45 @@ custom
 
 ## Cost Control Strategy
 
-The project is being designed to avoid unexpected AI costs.
+The project is designed to avoid unexpected AI costs.
 
 Current cost-control foundations:
 
 - deterministic model routing;
 - user-tier-aware model cost classes;
-- no paid fallback for free-tier routes;
-- compact context assembly before LLM calls;
+- no paid fallback for free-tier Application Prep routes;
+- compact candidate context assembly;
 - capped reusable answer selection;
 - bounded structured outputs;
-- no agent loops for Application Prep v1.
+- no agent loops for Application Prep v1;
+- exactly one LLM generation node in Application Prep.
 
-Planned Application Prep v1 should use a deterministic LangGraph workflow with exactly one LLM generation node.
+Performance and cost work still to explore:
+
+- summarize or compact large resumes;
+- cache stable resume summaries;
+- summarize long job descriptions;
+- decide whether resume storage is worth the product and privacy tradeoff;
+- tune behavior by free vs paid tier.
 
 ---
 
 ## Roadmap
 
-### Current milestone
+### Current focus
 
-- Finish deterministic Application Prep helpers.
-- Build LangGraph Application Prep skeleton.
-- Add one-call structured Application Prep generation.
-- Add protected `/api/applications/prep` endpoint.
-- Add Application Prep UI to `/applications/new`.
+- Improve Application Prep UX based on real usage.
+- Measure latency and token usage on large resume/job-description inputs.
+- Design context summarization/compaction strategy.
+- Decide how resume storage/versioning should work.
 
 ### Next milestones
 
 - Save generated application prep/history.
 - Add application dashboard/history.
-- Add resume storage/versioning.
-- Improve profile and answers UX.
-- Add AI-generated tailored answers.
+- Improve profile and reusable answers UX.
 - Add profile gap detection.
+- Add usage limits and tier behavior.
 
 ### Later exploration
 
@@ -509,7 +558,7 @@ Planned Application Prep v1 should use a deterministic LangGraph workflow with e
 - Browser-assisted autofill.
 - Playwright/MCP automation.
 - Application tracking dashboard.
-- Billing and usage limits.
+- Billing and paid plans.
 - More advanced LangGraph orchestration.
 
 ---
@@ -540,22 +589,27 @@ Frontend Engineer | Applied AI Engineering Enthusiast
 
 ## Status
 
-🚧 Active Development
-
-Current status summary:
+Active development.
 
 ```text
-✅ Job Match Analyzer
-✅ OpenRouter integration
-✅ Structured AI responses
-✅ Supabase auth foundation
-✅ Protected app workspace
-✅ Candidate profile memory
-✅ Reusable answers library
-✅ Deterministic model routing
-✅ Application Prep contracts
-✅ Deterministic Application Prep helpers
-🚧 LangGraph Application Prep workflow in progress
+Done:
+- Job Match Analyzer
+- OpenRouter integration
+- Structured AI responses
+- Supabase auth foundation
+- Protected app workspace
+- Candidate profile memory
+- Reusable answers library
+- Deterministic model routing
+- LangGraph Application Prep workflow
+- Application Prep API
+- New Application UI with shared inputs and two paths
+
+Next:
+- Performance and cost review for large inputs
+- Context compaction strategy
+- Persistence/history
+- Resume storage decision
 ```
 
 ---
