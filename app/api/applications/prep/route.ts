@@ -6,41 +6,6 @@ import {
   ApplicationPrepRequestSchema,
   ApplicationPrepResultSchema,
 } from "@/types/applicationPrep";
-import type { Database } from "@/types/database";
-
-type CandidateProfileRow =
-  Database["public"]["Tables"]["candidate_profiles"]["Row"];
-
-function countNonEmptyProfileFields(profile: CandidateProfileRow | null) {
-  if (!profile) {
-    return 0;
-  }
-
-  return [
-    profile.full_name,
-    profile.headline,
-    profile.location,
-    profile.linkedin_url,
-    profile.github_url,
-    profile.portfolio_url,
-    profile.salary_expectation,
-    profile.notice_period,
-    profile.work_authorization,
-    profile.english_level,
-    profile.relocation_preference,
-    ...(profile.target_roles ?? []),
-    ...(profile.skills ?? []),
-  ].filter((value) => typeof value === "string" && value.trim().length > 0)
-    .length;
-}
-
-function getProfileLinkPresence(profile: CandidateProfileRow | null) {
-  return {
-    hasGithubUrl: Boolean(profile?.github_url?.trim()),
-    hasLinkedinUrl: Boolean(profile?.linkedin_url?.trim()),
-    hasPortfolioUrl: Boolean(profile?.portfolio_url?.trim()),
-  };
-}
 
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -120,14 +85,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-
-  console.log("Application prep data load diagnostics:", {
-    profileLinkPresence: getProfileLinkPresence(profile),
-    profileNonEmptyFieldCount: countNonEmptyProfileFields(profile),
-    profileRowExists: Boolean(profile),
-    reusableAnswerRowCount: reusableAnswers?.length ?? 0,
-    userId,
-  });
 
   try {
     const graph = buildApplicationPrepGraph();

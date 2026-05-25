@@ -33,11 +33,45 @@ export const RelevantReusableAnswerSchema = z.object({
   relevanceReason: z.string().trim().min(1).max(160).optional(),
 });
 
+export const CandidateProfileRowSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  full_name: z.string().nullable(),
+  headline: z.string().nullable(),
+  location: z.string().nullable(),
+  linkedin_url: z.string().nullable(),
+  github_url: z.string().nullable(),
+  portfolio_url: z.string().nullable(),
+  target_roles: z.array(z.string()),
+  skills: z.array(z.string()),
+  salary_expectation: z.string().nullable(),
+  notice_period: z.string().nullable(),
+  work_authorization: z.string().nullable(),
+  english_level: z.string().nullable(),
+  relocation_preference: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const ReusableAnswerRowSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  label: z.string(),
+  category: ReusableAnswerCategorySchema,
+  question: z.string(),
+  answer: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
 export const CandidateContextSchema = z.object({
   profile: z.object({
     fullName: z.string().trim().min(1).nullable(),
     headline: z.string().trim().min(1).nullable(),
     location: z.string().trim().min(1).nullable(),
+    linkedinUrl: z.string().trim().min(1).nullable(),
+    githubUrl: z.string().trim().min(1).nullable(),
+    portfolioUrl: z.string().trim().min(1).nullable(),
     targetRoles: z.array(z.string().trim().min(1)).max(12),
     skills: z.array(z.string().trim().min(1)).max(40),
     salaryExpectation: z.string().trim().min(1).nullable(),
@@ -95,6 +129,8 @@ export const ApplicationPrepGraphStateSchema = z.object({
   userId: z.string().uuid(),
   userTier: z.enum(["free", "starter", "pro"]),
   request: ApplicationPrepRequestSchema.optional(),
+  profile: CandidateProfileRowSchema.nullable().optional(),
+  reusableAnswers: z.array(ReusableAnswerRowSchema).optional(),
   candidateContext: CandidateContextSchema.optional(),
   complexity: z.enum(["low", "medium", "high"]).optional(),
   modelRoute: z

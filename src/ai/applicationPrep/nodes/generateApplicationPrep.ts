@@ -42,23 +42,6 @@ function getErrorDiagnostics(error: unknown) {
 export async function generateApplicationPrep(
   state: ApplicationPrepGraphRuntimeState
 ): Promise<Partial<ApplicationPrepGraphRuntimeState>> {
-  console.log("Application prep generation preflight:", {
-    hasCandidateContext: Boolean(state.candidateContext),
-    hasModelRoute: Boolean(state.modelRoute),
-    modelRoute: state.modelRoute
-      ? {
-          allowPaidFallback: state.modelRoute.allowPaidFallback,
-          fallbackModels: state.modelRoute.fallbackModels,
-          maxTokens: state.modelRoute.maxTokens,
-          primaryModel: state.modelRoute.primaryModel,
-          temperature: state.modelRoute.temperature,
-        }
-      : null,
-    selectedModelIds: state.modelRoute
-      ? [state.modelRoute.primaryModel, ...state.modelRoute.fallbackModels]
-      : [],
-  });
-
   if (!state.candidateContext || !state.modelRoute) {
     return { error: "Application prep context or model route is missing." };
   }
