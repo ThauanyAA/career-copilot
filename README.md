@@ -370,13 +370,23 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 
 OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_DEFAULT_MODEL=qwen/qwen3-235b-a22b-2507
-OPENROUTER_FREE_MODEL=nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
-OPENROUTER_CHEAP_MODEL=qwen/qwen3-235b-a22b-2507
-OPENROUTER_STRONG_MODEL=qwen/qwen3-235b-a22b-2507
+OPENROUTER_DEFAULT_MODEL=your_default_openrouter_model
+OPENROUTER_FREE_MODEL=your_free_or_low_cost_openrouter_model
+OPENROUTER_CHEAP_MODEL=your_cheap_openrouter_model
+OPENROUTER_STRONG_MODEL=your_strong_openrouter_model
 ```
 
-Optional LangSmith tracing values are listed in `.env.example`.
+Optional LangSmith tracing values:
+
+```env
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_langsmith_api_key
+LANGSMITH_PROJECT=your_langsmith_project_name
+```
+
+Choose OpenRouter model IDs that are available to your account and appropriate
+for your cost/quality tradeoff. The app reads the model routing values from the
+environment so local testers can bring their own routing choices.
 
 Do not commit `.env` or `.env.local`.
 
