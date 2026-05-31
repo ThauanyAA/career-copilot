@@ -1,6 +1,36 @@
+import { redirect } from "next/navigation";
 import { ApplicationPrep } from "@/components/ApplicationPrep";
+import { createClient } from "@/lib/supabase/server";
 
-export default function NewApplicationPage() {
+export default async function NewApplicationPage() {
+  const supabase = await createClient();
+  const { data: claimsData, error: authError } =
+    await supabase.auth.getClaims();
+
+  if (authError || !claimsData?.claims) {
+    redirect("/login");
+  }
+
+  const userId = claimsData.claims.sub;
+
+  if (typeof userId !== "string") {
+    redirect("/login");
+  }
+
+  const { data: primaryResume, error: primaryResumeError } = await supabase
+    .from("resumes")
+    .select("title, content")
+    .eq("user_id", userId)
+    .eq("is_primary", true)
+    .maybeSingle();
+
+  if (primaryResumeError) {
+    console.error("Primary resume load error:", {
+      code: primaryResumeError.code,
+      message: primaryResumeError.message,
+    });
+  }
+
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-10 dark:bg-black">
       <div className="mx-auto max-w-5xl">
@@ -17,7 +47,7 @@ export default function NewApplicationPage() {
           </p>
         </div>
 
-        <ApplicationPrep />
+        <ApplicationPrep primaryResume={primaryResume ?? null} />
       </div>
     </main>
   );

@@ -11,6 +11,11 @@ type PrepError = {
   missingProfile: boolean;
 };
 
+type PrimaryResume = {
+  title: string;
+  content: string;
+};
+
 function getConfidenceLabel(confidence: string) {
   return confidence.charAt(0).toUpperCase() + confidence.slice(1);
 }
@@ -239,8 +244,14 @@ function ApplicationPrepResults({ result }: { result: ApplicationPrepResult }) {
   );
 }
 
-export function ApplicationPrep() {
-  const [resumeContent, setResumeContent] = useState("");
+export function ApplicationPrep({
+  primaryResume,
+}: {
+  primaryResume?: PrimaryResume | null;
+}) {
+  const [resumeContent, setResumeContent] = useState(
+    primaryResume?.content ?? ""
+  );
   const [jobDescription, setJobDescription] = useState("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
     null
@@ -372,12 +383,31 @@ export function ApplicationPrep() {
 
           <div className="mt-6 space-y-6">
             <div className="space-y-2">
-              <label
-                htmlFor="new-application-resume"
-                className="block text-sm font-medium text-zinc-900 dark:text-white"
-              >
-                Resume Content
-              </label>
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="new-application-resume"
+                  className="block text-sm font-medium text-zinc-900 dark:text-white"
+                >
+                  Resume Content
+                </label>
+                {primaryResume ? (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Using primary resume: {primaryResume.title}. You can edit it
+                    below for this run.
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    No primary resume yet.{" "}
+                    <Link
+                      href="/resumes"
+                      className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      Add one in Resumes
+                    </Link>
+                    , or paste resume text here.
+                  </p>
+                )}
+              </div>
               <textarea
                 id="new-application-resume"
                 value={resumeContent}
