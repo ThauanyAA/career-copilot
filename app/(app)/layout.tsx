@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/profile", label: "Profile" },
+  { href: "/resumes", label: "Resumes" },
   { href: "/answers", label: "Reusable Answers" },
-  { href: "/applications/new", label: "New Application / Analyzer" },
+  { href: "/applications/new", label: "New Application" },
 ];
 
 export default async function ProtectedAppLayout({

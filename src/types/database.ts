@@ -102,14 +102,52 @@ export type Database = {
         };
         Relationships: [];
       };
+      resumes: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          content: string;
+          is_primary: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          content: string;
+          is_primary?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          content?: string;
+          is_primary?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
+      ensure_single_primary_resume: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
       set_candidate_profiles_updated_at: {
         Args: Record<string, never>;
         Returns: unknown;
       };
       set_reusable_answers_updated_at: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      set_resumes_updated_at: {
         Args: Record<string, never>;
         Returns: unknown;
       };
