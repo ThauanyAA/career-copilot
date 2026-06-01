@@ -102,6 +102,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      resume_insights: {
+        Row: {
+          id: string;
+          user_id: string;
+          resume_id: string;
+          source_content_hash: string;
+          summary: string;
+          structured_data: Json;
+          profile_suggestions: Json;
+          reusable_answer_suggestions: Json;
+          missing_info_questions: Json;
+          warnings: Json;
+          limitations: Json;
+          model_id: string | null;
+          status: Database["public"]["Enums"]["resume_insight_status"];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          resume_id: string;
+          source_content_hash: string;
+          summary: string;
+          structured_data?: Json;
+          profile_suggestions?: Json;
+          reusable_answer_suggestions?: Json;
+          missing_info_questions?: Json;
+          warnings?: Json;
+          limitations?: Json;
+          model_id?: string | null;
+          status?: Database["public"]["Enums"]["resume_insight_status"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          resume_id?: string;
+          source_content_hash?: string;
+          summary?: string;
+          structured_data?: Json;
+          profile_suggestions?: Json;
+          reusable_answer_suggestions?: Json;
+          missing_info_questions?: Json;
+          warnings?: Json;
+          limitations?: Json;
+          model_id?: string | null;
+          status?: Database["public"]["Enums"]["resume_insight_status"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       resumes: {
         Row: {
           id: string;
@@ -147,12 +201,17 @@ export type Database = {
         Args: Record<string, never>;
         Returns: unknown;
       };
+      set_resume_insights_updated_at: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
       set_resumes_updated_at: {
         Args: Record<string, never>;
         Returns: unknown;
       };
     };
     Enums: {
+      resume_insight_status: "draft" | "reviewed" | "stale" | "failed";
       reusable_answer_category:
         | "salary_expectation"
         | "notice_period"
