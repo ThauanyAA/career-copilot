@@ -2,7 +2,8 @@ export type AiTask =
   | "job_analysis"
   | "application_prep"
   | "answer_draft"
-  | "context_summary";
+  | "context_summary"
+  | "resume_intelligence";
 
 export type ComplexityLevel = "low" | "medium" | "high";
 
@@ -164,10 +165,46 @@ function getDefaultRoute(
   };
 }
 
+function getResumeIntelligenceRoute(
+  request: ModelRouteRequest
+): Omit<ModelRoute, "task" | "complexity" | "userTier"> {
+  if (request.userTier === "free") {
+    return {
+      primaryModel: models.free,
+      fallbackModels: [],
+      maxTokens: request.complexity === "high" ? 2200 : 1800,
+      temperature: 0.1,
+      allowPaidFallback: false,
+    };
+  }
+
+  if (request.userTier === "starter") {
+    return {
+      primaryModel:
+        request.complexity === "low" ? models.free : models.cheapPaid,
+      fallbackModels: [],
+      maxTokens: request.complexity === "high" ? 2600 : 2200,
+      temperature: 0.1,
+      allowPaidFallback: false,
+    };
+  }
+
+  return {
+    primaryModel:
+      request.complexity === "high" ? models.strongPaid : models.cheapPaid,
+    fallbackModels: [],
+    maxTokens: request.complexity === "high" ? 3200 : 2600,
+    temperature: 0.1,
+    allowPaidFallback: false,
+  };
+}
+
 export function resolveModelRoute(request: ModelRouteRequest): ModelRoute {
   const routeConfig =
     request.task === "application_prep"
       ? getApplicationPrepRoute(request)
+      : request.task === "resume_intelligence"
+        ? getResumeIntelligenceRoute(request)
       : getDefaultRoute(request);
 
   return withGuardrails({
