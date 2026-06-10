@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { calculateResumeContentHash } from "@/ai/resumeIntelligence/hash";
 import { analyzeSavedResume } from "@/ai/resumeIntelligence/service";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -15,12 +16,29 @@ type CandidateProfileRow =
   Database["public"]["Tables"]["candidate_profiles"]["Row"];
 type ReusableAnswerRow =
   Database["public"]["Tables"]["reusable_answers"]["Row"];
+type ResumeInsightRow =
+  Database["public"]["Tables"]["resume_insights"]["Row"];
+type ResumeInsightResponseRow = Pick<
+  ResumeInsightRow,
+  | "id"
+  | "status"
+  | "source_content_hash"
+  | "summary"
+  | "structured_data"
+  | "profile_suggestions"
+  | "reusable_answer_suggestions"
+  | "missing_info_questions"
+  | "warnings"
+  | "limitations"
+  | "created_at"
+>;
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 const ResumeIdSchema = z.string().uuid();
+const REUSABLE_RESUME_INSIGHT_STATUSES = ["draft", "reviewed"] as const;
 
 function compactOptionalText(value: string | null | undefined) {
   const compacted = value?.trim().replace(/\s+/g, " ") ?? "";
@@ -65,6 +83,41 @@ function mapReusableAnswerContext(
 
 function toJson(value: unknown): Json {
   return JSON.parse(JSON.stringify(value)) as Json;
+}
+
+function parseStoredResumeInsightResult(
+  insight: ResumeInsightResponseRow
+): ResumeInsightResult {
+  return ResumeInsightResultSchema.parse({
+    summary: insight.summary,
+    structuredData: insight.structured_data,
+    profileSuggestions: insight.profile_suggestions,
+    reusableAnswerSuggestions: insight.reusable_answer_suggestions,
+    missingInfoQuestions: insight.missing_info_questions,
+    warnings: insight.warnings,
+    limitations: insight.limitations,
+  });
+}
+
+function toResumeInsightResponse({
+  insight,
+  result,
+  reusedExisting,
+}: {
+  insight: ResumeInsightResponseRow;
+  result: ResumeInsightResult;
+  reusedExisting: boolean;
+}) {
+  return {
+    insight: {
+      id: insight.id,
+      status: insight.status,
+      sourceContentHash: insight.source_content_hash,
+      createdAt: insight.created_at,
+    },
+    result,
+    reusedExisting,
+  };
 }
 
 export async function POST(_request: Request, { params }: RouteContext) {
@@ -114,6 +167,65 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return NextResponse.json(
       { error: "Resume not found." },
       { status: 404 }
+    );
+  }
+
+  const sourceContentHash = calculateResumeContentHash(resume.content);
+  const { data: existingInsight, error: existingInsightError } = await supabase
+    .from("resume_insights")
+    .select(
+      "id,status,source_content_hash,summary,structured_data,profile_suggestions,reusable_answer_suggestions,missing_info_questions,warnings,limitations,created_at"
+    )
+    .eq("user_id", userId)
+    .eq("resume_id", resume.id)
+    .eq("source_content_hash", sourceContentHash)
+    .in("status", REUSABLE_RESUME_INSIGHT_STATUSES)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingInsightError) {
+    console.error("Resume insight cache lookup error:", {
+      code: existingInsightError.code,
+      message: existingInsightError.message,
+    });
+
+    return NextResponse.json(
+      { error: "Unable to check existing resume insight." },
+      { status: 500 }
+    );
+  }
+
+  if (existingInsight) {
+    let parsedExistingResult: ResumeInsightResult;
+
+    try {
+      parsedExistingResult = parseStoredResumeInsightResult(existingInsight);
+    } catch (error) {
+      console.error("Resume insight cache parse error:", {
+        error,
+        insightId: existingInsight.id,
+      });
+
+      return NextResponse.json(
+        { error: "Unable to return existing resume insight." },
+        { status: 500 }
+      );
+    }
+
+    console.log("Resume insight cache hit:", {
+      resumeId: resume.id,
+      sourceContentHash,
+      status: existingInsight.status,
+      totalDurationMs: Date.now() - startedAt,
+    });
+
+    return NextResponse.json(
+      toResumeInsightResponse({
+        insight: existingInsight,
+        result: parsedExistingResult,
+        reusedExisting: true,
+      })
     );
   }
 
@@ -213,7 +325,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     .insert({
       user_id: userId,
       resume_id: resume.id,
-      source_content_hash: analysis.sourceContentHash,
+      source_content_hash: sourceContentHash,
       summary: parsedResult.summary,
       structured_data: toJson(parsedResult.structuredData),
       profile_suggestions: toJson(parsedResult.profileSuggestions),
@@ -241,13 +353,23 @@ export async function POST(_request: Request, { params }: RouteContext) {
     );
   }
 
-  return NextResponse.json({
-    insight: {
-      id: savedInsight.id,
-      status: savedInsight.status,
-      sourceContentHash: savedInsight.source_content_hash,
-      createdAt: savedInsight.created_at,
-    },
-    result: parsedResult satisfies ResumeInsightResult,
-  });
+  return NextResponse.json(
+    toResumeInsightResponse({
+      insight: {
+        ...savedInsight,
+        summary: parsedResult.summary,
+        source_content_hash: sourceContentHash,
+        structured_data: toJson(parsedResult.structuredData),
+        profile_suggestions: toJson(parsedResult.profileSuggestions),
+        reusable_answer_suggestions: toJson(
+          parsedResult.reusableAnswerSuggestions
+        ),
+        missing_info_questions: toJson(parsedResult.missingInfoQuestions),
+        warnings: toJson(parsedResult.warnings),
+        limitations: toJson(parsedResult.limitations),
+      },
+      result: parsedResult satisfies ResumeInsightResult,
+      reusedExisting: false,
+    })
+  );
 }
