@@ -12,11 +12,22 @@ import {
   ResumeProfileSuggestionsSchema,
   type CandidateProfileInsert,
 } from "./profileSuggestionApply";
+import {
+  getReusableAnswerSuggestionInput,
+  reusableAnswerSuggestionAlreadyExists,
+  ResumeReusableAnswerSuggestionsSchema,
+  type ReusableAnswerInsert,
+} from "./reusableAnswerSuggestionApply";
 import { createClient } from "@/lib/supabase/server";
 
 export type ApplyProfileSuggestionFormState = {
   appliedAt: number | null;
   error: string | null;
+};
+export type AddReusableAnswerSuggestionFormState = {
+  addedAt: number | null;
+  error: string | null;
+  message: string | null;
 };
 
 const ResumeSchema = z.object({
@@ -33,6 +44,14 @@ const ApplyProfileSuggestionSchema = z.object({
     .transform(Number)
     .pipe(z.number().int().min(0).max(5)),
 });
+const AddReusableAnswerSuggestionSchema = z.object({
+  insightId: z.string().uuid(),
+  suggestionIndex: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .pipe(z.number().int().min(0).max(3)),
+});
 
 function getRedirectPath(error: string) {
   return `/resumes?error=${encodeURIComponent(error)}`;
@@ -44,6 +63,20 @@ function getApplyProfileSuggestionState(
   return {
     appliedAt: null,
     error,
+  };
+}
+
+function getAddReusableAnswerSuggestionState({
+  error,
+  message,
+}: {
+  error?: string;
+  message?: string;
+}): AddReusableAnswerSuggestionFormState {
+  return {
+    addedAt: null,
+    error: error ?? null,
+    message: message ?? null,
   };
 }
 
@@ -346,5 +379,127 @@ export async function applyResumeProfileSuggestion(
   return {
     appliedAt: Date.now(),
     error: null,
+  };
+}
+
+export async function addResumeReusableAnswerSuggestion(
+  _previousState: AddReusableAnswerSuggestionFormState,
+  formData: FormData
+): Promise<AddReusableAnswerSuggestionFormState> {
+  const parsedForm = AddReusableAnswerSuggestionSchema.safeParse({
+    insightId: formData.get("insightId"),
+    suggestionIndex: formData.get("suggestionIndex"),
+  });
+
+  if (!parsedForm.success) {
+    return getAddReusableAnswerSuggestionState({
+      error: "Choose a valid reusable answer suggestion to add.",
+    });
+  }
+
+  const { supabase, userId } = await getAuthenticatedUserId();
+  const { data: insight, error: insightError } = await supabase
+    .from("resume_insights")
+    .select("id, reusable_answer_suggestions")
+    .eq("id", parsedForm.data.insightId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (insightError) {
+    console.error("Resume reusable answer suggestion load error:", {
+      code: insightError.code,
+      message: insightError.message,
+    });
+
+    return getAddReusableAnswerSuggestionState({
+      error: "Unable to load this reusable answer suggestion.",
+    });
+  }
+
+  if (!insight) {
+    return getAddReusableAnswerSuggestionState({
+      error: "This reusable answer suggestion is no longer available.",
+    });
+  }
+
+  const parsedSuggestions = ResumeReusableAnswerSuggestionsSchema.safeParse(
+    insight.reusable_answer_suggestions
+  );
+
+  if (!parsedSuggestions.success) {
+    return getAddReusableAnswerSuggestionState({
+      error: "This reusable answer suggestion cannot be added.",
+    });
+  }
+
+  const suggestion = parsedSuggestions.data[parsedForm.data.suggestionIndex];
+
+  if (!suggestion) {
+    return getAddReusableAnswerSuggestionState({
+      error: "This reusable answer suggestion is no longer available.",
+    });
+  }
+
+  const answerInput = getReusableAnswerSuggestionInput(suggestion);
+
+  if (!answerInput) {
+    return getAddReusableAnswerSuggestionState({
+      error: "This reusable answer suggestion has an unsupported value.",
+    });
+  }
+
+  const { data: existingAnswers, error: existingAnswersError } = await supabase
+    .from("reusable_answers")
+    .select("label, answer")
+    .eq("user_id", userId);
+
+  if (existingAnswersError) {
+    console.error("Resume reusable answer duplicate lookup error:", {
+      code: existingAnswersError.code,
+      message: existingAnswersError.message,
+    });
+
+    return getAddReusableAnswerSuggestionState({
+      error: "Unable to check your existing answers right now.",
+    });
+  }
+
+  if (
+    reusableAnswerSuggestionAlreadyExists({
+      existingAnswers: existingAnswers ?? [],
+      suggestion,
+    })
+  ) {
+    return getAddReusableAnswerSuggestionState({
+      message: "Already in answers",
+    });
+  }
+
+  const reusableAnswer = {
+    ...answerInput,
+    user_id: userId,
+  } satisfies ReusableAnswerInsert;
+  const { error } = await supabase.from("reusable_answers").insert(
+    reusableAnswer
+  );
+
+  if (error) {
+    console.error("Resume reusable answer suggestion add error:", {
+      code: error.code,
+      message: error.message,
+    });
+
+    return getAddReusableAnswerSuggestionState({
+      error: "Unable to add this reusable answer right now.",
+    });
+  }
+
+  revalidatePath("/answers");
+  revalidatePath("/resumes");
+
+  return {
+    addedAt: Date.now(),
+    error: null,
+    message: "Added to answers.",
   };
 }

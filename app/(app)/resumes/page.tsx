@@ -6,6 +6,7 @@ import {
   markResumePrimary,
   updateResume,
 } from "./actions";
+import { AddReusableAnswerSuggestionButton } from "./AddReusableAnswerSuggestionButton";
 import { AnalyzeResumeButton } from "./AnalyzeResumeButton";
 import { ApplyProfileSuggestionButton } from "./ApplyProfileSuggestionButton";
 import { FormSubmitButton } from "@/components/FormSubmitButton";
@@ -14,6 +15,11 @@ import {
   type CandidateProfileRow,
   type ProfileSuggestionApplyState,
 } from "./profileSuggestionApply";
+import {
+  getReusableAnswerSuggestionApplyState,
+  type ReusableAnswerDuplicateCandidate,
+  type ReusableAnswerSuggestionApplyState,
+} from "./reusableAnswerSuggestionApply";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import {
@@ -90,6 +96,7 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
   const [
     latestInsightsByResumeId,
     { data: profileRow, error: profileError },
+    { data: reusableAnswerRows, error: reusableAnswersError },
   ] = await Promise.all([
     loadLatestInsightsByResumeId({
       resumeIds: resumes.map((resume) => resume.id),
@@ -101,13 +108,25 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
       .select("*")
       .eq("user_id", userId)
       .maybeSingle(),
+    supabase
+      .from("reusable_answers")
+      .select("label, answer")
+      .eq("user_id", userId),
   ]);
   const currentProfile = profileRow ?? null;
+  const existingReusableAnswers = reusableAnswerRows ?? [];
 
   if (profileError) {
     console.error("Resume profile suggestion profile load error:", {
       code: profileError.code,
       message: profileError.message,
+    });
+  }
+
+  if (reusableAnswersError) {
+    console.error("Resume reusable answer suggestion duplicate load error:", {
+      code: reusableAnswersError.code,
+      message: reusableAnswersError.message,
     });
   }
 
@@ -224,6 +243,7 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
 
                   <ResumeInsightPreviewSection
                     currentProfile={currentProfile}
+                    existingReusableAnswers={existingReusableAnswers}
                     insight={latestInsightsByResumeId.get(resume.id)}
                   />
 
@@ -328,9 +348,11 @@ function getStatusMessage(params: Awaited<ResumesPageProps["searchParams"]>) {
 
 function ResumeInsightPreviewSection({
   currentProfile,
+  existingReusableAnswers,
   insight,
 }: {
   currentProfile: CandidateProfileRow | null;
+  existingReusableAnswers: ReusableAnswerDuplicateCandidate[];
   insight?: ResumeInsightPreview;
 }) {
   if (!insight) {
@@ -435,21 +457,52 @@ function ResumeInsightPreviewSection({
             <EmptyPreviewText>No reusable answer suggestions yet.</EmptyPreviewText>
           ) : (
             <div className="space-y-3">
-              {result.reusableAnswerSuggestions.map((suggestion, index) => (
-                <div
-                  key={`${suggestion.label}-${index}`}
-                  className="border-l-2 border-emerald-100 pl-3 dark:border-emerald-900"
-                >
-                  <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
-                    {suggestion.label}
-                  </p>
-                  <p className="mt-1 break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-                    {suggestion.answer}
-                  </p>
-                  <PreviewReason reason={suggestion.reason} />
-                  <SourceSnippet snippet={suggestion.sourceSnippet} />
-                </div>
-              ))}
+              {result.reusableAnswerSuggestions.map((suggestion, index) => {
+                const applyState = getReusableAnswerSuggestionApplyState({
+                  existingAnswers: existingReusableAnswers,
+                  suggestion,
+                });
+
+                return (
+                  <div
+                    key={`${suggestion.label}-${index}`}
+                    className="border-l-2 border-emerald-100 pl-3 dark:border-emerald-900"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
+                          {suggestion.label}
+                        </p>
+                        <p className="mt-1 break-words text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+                          {formatFieldName(suggestion.category)}
+                        </p>
+                        <p className="mt-2 break-words text-sm font-medium text-zinc-900 dark:text-white">
+                          Question:{" "}
+                          <span className="font-normal text-zinc-700 dark:text-zinc-200">
+                            {suggestion.question}
+                          </span>
+                        </p>
+                        <p className="mt-1 break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                          {suggestion.answer}
+                        </p>
+                        <PreviewReason reason={suggestion.reason} />
+                        <SourceSnippet snippet={suggestion.sourceSnippet} />
+                      </div>
+                      {applyState.status === "ready" ? (
+                        <AddReusableAnswerSuggestionButton
+                          actionLabel={applyState.actionLabel}
+                          insightId={insight.row.id}
+                          suggestionIndex={index}
+                        />
+                      ) : (
+                        <ReusableAnswerSuggestionApplyStatus
+                          state={applyState}
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </PreviewBlock>
@@ -508,6 +561,23 @@ function ProfileSuggestionApplyStatus({
 
   const className =
     state.status === "applied"
+      ? "shrink-0 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-200"
+      : "shrink-0 rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
+
+  return <span className={className}>{state.message}</span>;
+}
+
+function ReusableAnswerSuggestionApplyStatus({
+  state,
+}: {
+  state: ReusableAnswerSuggestionApplyState;
+}) {
+  if (state.status === "ready") {
+    return null;
+  }
+
+  const className =
+    state.status === "added"
       ? "shrink-0 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-200"
       : "shrink-0 rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
 
