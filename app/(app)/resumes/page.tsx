@@ -1,15 +1,41 @@
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   createResume,
   deleteResume,
   markResumePrimary,
   updateResume,
 } from "./actions";
+import { AnalyzeResumeButton } from "./AnalyzeResumeButton";
 import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
+import {
+  ResumeInsightResultSchema,
+  type ResumeInsightResult,
+} from "@/types/resumeIntelligence";
 
 type Resume = Database["public"]["Tables"]["resumes"]["Row"];
+type ResumeInsightRow =
+  Database["public"]["Tables"]["resume_insights"]["Row"];
+
+type ResumeInsightPreview = {
+  row: Pick<
+    ResumeInsightRow,
+    | "id"
+    | "resume_id"
+    | "status"
+    | "summary"
+    | "structured_data"
+    | "profile_suggestions"
+    | "reusable_answer_suggestions"
+    | "missing_info_questions"
+    | "warnings"
+    | "limitations"
+    | "updated_at"
+  >;
+  result: ResumeInsightResult | null;
+};
 
 type ResumesPageProps = {
   searchParams: Promise<{
@@ -54,6 +80,12 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
     resumes = [];
     loadError = "Unable to load your saved resumes right now.";
   }
+
+  const latestInsightsByResumeId = await loadLatestInsightsByResumeId({
+    resumeIds: resumes.map((resume) => resume.id),
+    supabase,
+    userId,
+  });
 
   const params = await searchParams;
   const statusMessage = getStatusMessage(params);
@@ -153,6 +185,7 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
                           </FormSubmitButton>
                         </form>
                       )}
+                      <AnalyzeResumeButton resumeId={resume.id} />
                       <form action={deleteResume}>
                         <input type="hidden" name="id" value={resume.id} />
                         <FormSubmitButton
@@ -164,6 +197,10 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
                       </form>
                     </div>
                   </div>
+
+                  <ResumeInsightPreviewSection
+                    insight={latestInsightsByResumeId.get(resume.id)}
+                  />
 
                   <ResumeForm
                     action={updateResume}
@@ -178,6 +215,70 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
       </div>
     </main>
   );
+}
+
+async function loadLatestInsightsByResumeId({
+  resumeIds,
+  supabase,
+  userId,
+}: {
+  resumeIds: string[];
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+}) {
+  const insightsByResumeId = new Map<string, ResumeInsightPreview>();
+
+  if (resumeIds.length === 0) {
+    return insightsByResumeId;
+  }
+
+  const { data: insights, error } = await supabase
+    .from("resume_insights")
+    .select(
+      "id,resume_id,status,summary,structured_data,profile_suggestions,reusable_answer_suggestions,missing_info_questions,warnings,limitations,updated_at"
+    )
+    .eq("user_id", userId)
+    .in("resume_id", resumeIds)
+    .in("status", ["draft", "reviewed", "stale"])
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("Resume insights load error:", {
+      code: error.code,
+      message: error.message,
+    });
+
+    return insightsByResumeId;
+  }
+
+  for (const insight of insights ?? []) {
+    if (insightsByResumeId.has(insight.resume_id)) {
+      continue;
+    }
+
+    insightsByResumeId.set(insight.resume_id, {
+      row: insight,
+      result: parseResumeInsightResult(insight),
+    });
+  }
+
+  return insightsByResumeId;
+}
+
+function parseResumeInsightResult(
+  insight: ResumeInsightPreview["row"]
+): ResumeInsightResult | null {
+  const parsed = ResumeInsightResultSchema.safeParse({
+    summary: insight.summary,
+    structuredData: insight.structured_data,
+    profileSuggestions: insight.profile_suggestions,
+    reusableAnswerSuggestions: insight.reusable_answer_suggestions,
+    missingInfoQuestions: insight.missing_info_questions,
+    warnings: insight.warnings,
+    limitations: insight.limitations,
+  });
+
+  return parsed.success ? parsed.data : null;
 }
 
 function getStatusMessage(params: Awaited<ResumesPageProps["searchParams"]>) {
@@ -198,6 +299,203 @@ function getStatusMessage(params: Awaited<ResumesPageProps["searchParams"]>) {
   }
 
   return null;
+}
+
+function ResumeInsightPreviewSection({
+  insight,
+}: {
+  insight?: ResumeInsightPreview;
+}) {
+  if (!insight) {
+    return (
+      <section className="border-t border-zinc-100 py-5 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+        No resume insights yet.
+      </section>
+    );
+  }
+
+  if (!insight.result) {
+    return (
+      <section className="border-t border-zinc-100 py-5 dark:border-zinc-800">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+            Latest insight
+          </h4>
+          <InsightStatusBadge status={insight.row.status} />
+        </div>
+        <p className="break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+          {insight.row.summary}
+        </p>
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          This insight uses an older format and cannot be previewed fully.
+        </p>
+      </section>
+    );
+  }
+
+  const result = insight.result;
+
+  return (
+    <section className="border-t border-zinc-100 py-5 dark:border-zinc-800">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+            Latest insight
+          </h4>
+          <InsightStatusBadge status={insight.row.status} />
+        </div>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Updated {new Date(insight.row.updated_at).toLocaleDateString()}
+        </p>
+      </div>
+
+      <div className="space-y-5">
+        <PreviewBlock title="Summary">
+          <p className="break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+            {result.summary}
+          </p>
+        </PreviewBlock>
+
+        <PreviewBlock title="Profile suggestions">
+          {result.profileSuggestions.length === 0 ? (
+            <EmptyPreviewText>No profile suggestions yet.</EmptyPreviewText>
+          ) : (
+            <div className="space-y-3">
+              {result.profileSuggestions.map((suggestion, index) => (
+                <div
+                  key={`${suggestion.field}-${index}`}
+                  className="border-l-2 border-blue-100 pl-3 dark:border-blue-900"
+                >
+                  <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
+                    {formatFieldName(suggestion.field)}:{" "}
+                    <span className="font-normal text-zinc-700 dark:text-zinc-200">
+                      {formatSuggestedValue(suggestion.suggestedValue)}
+                    </span>
+                  </p>
+                  <PreviewReason reason={suggestion.reason} />
+                  <SourceSnippet snippet={suggestion.sourceSnippet} />
+                </div>
+              ))}
+            </div>
+          )}
+        </PreviewBlock>
+
+        <PreviewBlock title="Reusable answer suggestions">
+          {result.reusableAnswerSuggestions.length === 0 ? (
+            <EmptyPreviewText>No reusable answer suggestions yet.</EmptyPreviewText>
+          ) : (
+            <div className="space-y-3">
+              {result.reusableAnswerSuggestions.map((suggestion, index) => (
+                <div
+                  key={`${suggestion.label}-${index}`}
+                  className="border-l-2 border-emerald-100 pl-3 dark:border-emerald-900"
+                >
+                  <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
+                    {suggestion.label}
+                  </p>
+                  <p className="mt-1 break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                    {suggestion.answer}
+                  </p>
+                  <PreviewReason reason={suggestion.reason} />
+                  <SourceSnippet snippet={suggestion.sourceSnippet} />
+                </div>
+              ))}
+            </div>
+          )}
+        </PreviewBlock>
+
+        <PreviewBlock title="Missing info questions">
+          {result.missingInfoQuestions.length === 0 ? (
+            <EmptyPreviewText>No missing info questions yet.</EmptyPreviewText>
+          ) : (
+            <div className="space-y-2">
+              {result.missingInfoQuestions.map((question, index) => (
+                <div key={`${question.field}-${index}`}>
+                  <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
+                    {question.question}
+                  </p>
+                  <PreviewReason reason={question.reason} />
+                </div>
+              ))}
+            </div>
+          )}
+        </PreviewBlock>
+
+        {(result.warnings.length > 0 || result.limitations.length > 0) && (
+          <PreviewBlock title="Warnings and limitations">
+            <ul className="space-y-1 break-words text-sm text-zinc-600 dark:text-zinc-300">
+              {[...result.warnings, ...result.limitations].map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </PreviewBlock>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function InsightStatusBadge({
+  status,
+}: {
+  status: ResumeInsightPreview["row"]["status"];
+}) {
+  return (
+    <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium capitalize text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+      {status}
+    </span>
+  );
+}
+
+function PreviewBlock({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <div>
+      <h5 className="mb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+        {title}
+      </h5>
+      {children}
+    </div>
+  );
+}
+
+function EmptyPreviewText({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-sm text-zinc-500 dark:text-zinc-400">{children}</p>
+  );
+}
+
+function PreviewReason({ reason }: { reason: string }) {
+  return (
+    <p className="mt-1 break-words text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+      {reason}
+    </p>
+  );
+}
+
+function SourceSnippet({ snippet }: { snippet: string | null }) {
+  if (!snippet) {
+    return null;
+  }
+
+  return (
+    <p className="mt-2 break-words text-xs italic leading-relaxed text-zinc-500 dark:text-zinc-400">
+      Source: {snippet}
+    </p>
+  );
+}
+
+function formatFieldName(field: string) {
+  return field.replaceAll("_", " ");
+}
+
+function formatSuggestedValue(value: string | string[]) {
+  return Array.isArray(value) ? value.join(", ") : value;
 }
 
 function ResumeForm({
