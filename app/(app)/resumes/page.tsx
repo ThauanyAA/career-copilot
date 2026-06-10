@@ -7,6 +7,7 @@ import {
   updateResume,
 } from "./actions";
 import { AnalyzeResumeButton } from "./AnalyzeResumeButton";
+import { ApplyProfileSuggestionButton } from "./ApplyProfileSuggestionButton";
 import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
@@ -366,14 +367,25 @@ function ResumeInsightPreviewSection({
                   key={`${suggestion.field}-${index}`}
                   className="border-l-2 border-blue-100 pl-3 dark:border-blue-900"
                 >
-                  <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
-                    {formatFieldName(suggestion.field)}:{" "}
-                    <span className="font-normal text-zinc-700 dark:text-zinc-200">
-                      {formatSuggestedValue(suggestion.suggestedValue)}
-                    </span>
-                  </p>
-                  <PreviewReason reason={suggestion.reason} />
-                  <SourceSnippet snippet={suggestion.sourceSnippet} />
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
+                        {formatFieldName(suggestion.field)}:{" "}
+                        <span className="font-normal text-zinc-700 dark:text-zinc-200">
+                          {formatSuggestedValue(suggestion.suggestedValue)}
+                        </span>
+                      </p>
+                      <PreviewReason reason={suggestion.reason} />
+                      <PreviewEvidenceType
+                        evidenceType={suggestion.evidenceType}
+                      />
+                      <SourceSnippet snippet={suggestion.sourceSnippet} />
+                    </div>
+                    <ApplyProfileSuggestionButton
+                      insightId={insight.row.id}
+                      suggestionIndex={index}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -474,6 +486,14 @@ function PreviewReason({ reason }: { reason: string }) {
   return (
     <p className="mt-1 break-words text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
       {reason}
+    </p>
+  );
+}
+
+function PreviewEvidenceType({ evidenceType }: { evidenceType: string }) {
+  return (
+    <p className="mt-1 break-words text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+      Evidence: {formatFieldName(evidenceType)}
     </p>
   );
 }
