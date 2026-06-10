@@ -3,39 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database";
 import {
-  ResumeProfileSuggestionSchema,
-  type ResumeProfileSuggestion,
-} from "@/types/resumeIntelligence";
-
-type CandidateProfileInsert =
-  Database["public"]["Tables"]["candidate_profiles"]["Insert"];
-type CandidateProfileColumn = keyof Pick<
-  CandidateProfileInsert,
-  | "full_name"
-  | "headline"
-  | "location"
-  | "linkedin_url"
-  | "github_url"
-  | "portfolio_url"
-  | "target_roles"
-  | "skills"
-  | "salary_expectation"
-  | "notice_period"
-  | "work_authorization"
-  | "english_level"
-  | "relocation_preference"
->;
-type CandidateProfileArrayColumn = Extract<
-  CandidateProfileColumn,
-  "target_roles" | "skills"
->;
-type CandidateProfileUrlColumn = Extract<
-  CandidateProfileColumn,
-  "linkedin_url" | "github_url" | "portfolio_url"
->;
+  canApplySensitiveProfileSuggestion,
+  getProfileSuggestionColumn,
+  getSuggestionValueForProfileColumn,
+  isCandidateProfileArrayColumn,
+  mergeProfileArraySuggestion,
+  ResumeProfileSuggestionsSchema,
+  type CandidateProfileInsert,
+} from "./profileSuggestionApply";
+import { createClient } from "@/lib/supabase/server";
 
 export type ApplyProfileSuggestionFormState = {
   appliedAt: number | null;
@@ -56,55 +33,9 @@ const ApplyProfileSuggestionSchema = z.object({
     .transform(Number)
     .pipe(z.number().int().min(0).max(5)),
 });
-const ResumeProfileSuggestionsSchema = z
-  .array(ResumeProfileSuggestionSchema)
-  .max(6);
-const ProfileSuggestionUrlSchema = z.string().trim().url();
-const PROFILE_SUGGESTION_FIELD_TO_PROFILE_COLUMN = {
-  full_name: "full_name",
-  headline: "headline",
-  location: "location",
-  linkedin_url: "linkedin_url",
-  github_url: "github_url",
-  portfolio_url: "portfolio_url",
-  target_roles: "target_roles",
-  skills: "skills",
-  salary_expectation: "salary_expectation",
-  notice_period: "notice_period",
-  work_authorization: "work_authorization",
-  english_level: "english_level",
-  relocation_preference: "relocation_preference",
-} as const satisfies Record<
-  ResumeProfileSuggestion["field"],
-  CandidateProfileColumn
->;
-const SENSITIVE_PROFILE_SUGGESTION_FIELDS = new Set<
-  ResumeProfileSuggestion["field"]
->([
-  "salary_expectation",
-  "notice_period",
-  "work_authorization",
-  "relocation_preference",
-]);
-const ARRAY_PROFILE_COLUMNS = new Set<CandidateProfileArrayColumn>([
-  "target_roles",
-  "skills",
-]);
-const URL_PROFILE_COLUMNS = new Set<CandidateProfileUrlColumn>([
-  "linkedin_url",
-  "github_url",
-  "portfolio_url",
-]);
 
 function getRedirectPath(error: string) {
   return `/resumes?error=${encodeURIComponent(error)}`;
-}
-
-function parseListField(value: string) {
-  return value
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function getApplyProfileSuggestionState(
@@ -114,52 +45,6 @@ function getApplyProfileSuggestionState(
     appliedAt: null,
     error,
   };
-}
-
-function getSuggestionValueForProfileColumn({
-  column,
-  suggestedValue,
-}: {
-  column: CandidateProfileColumn;
-  suggestedValue: ResumeProfileSuggestion["suggestedValue"];
-}) {
-  if (ARRAY_PROFILE_COLUMNS.has(column as CandidateProfileArrayColumn)) {
-    return Array.isArray(suggestedValue)
-      ? suggestedValue
-      : parseListField(suggestedValue);
-  }
-
-  const textValue = Array.isArray(suggestedValue)
-    ? suggestedValue.join(", ")
-    : suggestedValue;
-  const compactTextValue = textValue.trim();
-
-  if (compactTextValue.length === 0) {
-    return null;
-  }
-
-  if (URL_PROFILE_COLUMNS.has(column as CandidateProfileUrlColumn)) {
-    const parsedUrl = ProfileSuggestionUrlSchema.safeParse(compactTextValue);
-
-    if (!parsedUrl.success) {
-      return null;
-    }
-  }
-
-  return compactTextValue;
-}
-
-function canApplySensitiveProfileSuggestion(
-  suggestion: ResumeProfileSuggestion
-) {
-  if (!SENSITIVE_PROFILE_SUGGESTION_FIELDS.has(suggestion.field)) {
-    return true;
-  }
-
-  return (
-    suggestion.evidenceType === "explicit_resume_text" &&
-    Boolean(suggestion.sourceSnippet?.trim())
-  );
 }
 
 async function getAuthenticatedUserId() {
@@ -375,8 +260,7 @@ export async function applyResumeProfileSuggestion(
     );
   }
 
-  const column =
-    PROFILE_SUGGESTION_FIELD_TO_PROFILE_COLUMN[suggestion.field] ?? null;
+  const column = getProfileSuggestionColumn(suggestion);
 
   if (!column) {
     return getApplyProfileSuggestionState(
@@ -401,9 +285,41 @@ export async function applyResumeProfileSuggestion(
     );
   }
 
+  let profileValue = value;
+
+  if (isCandidateProfileArrayColumn(column)) {
+    if (!Array.isArray(value)) {
+      return getApplyProfileSuggestionState(
+        "This profile suggestion has an unsupported value."
+      );
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("candidate_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Resume profile suggestion current profile load error:", {
+        code: profileError.code,
+        message: profileError.message,
+      });
+
+      return getApplyProfileSuggestionState(
+        "Unable to load your profile before applying this suggestion."
+      );
+    }
+
+    profileValue = mergeProfileArraySuggestion({
+      existingValues: profile?.[column] ?? [],
+      suggestedValues: value,
+    });
+  }
+
   const profileUpdate = {
     user_id: userId,
-    [column]: value,
+    [column]: profileValue,
   } as CandidateProfileInsert;
 
   const { error } = await supabase.from("candidate_profiles").upsert(

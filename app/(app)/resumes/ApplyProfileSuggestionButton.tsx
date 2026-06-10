@@ -8,6 +8,7 @@ import {
 } from "./actions";
 
 type ApplyProfileSuggestionButtonProps = {
+  actionLabel?: string;
   insightId: string;
   suggestionIndex: number;
 };
@@ -18,6 +19,7 @@ const initialState: ApplyProfileSuggestionFormState = {
 };
 
 export function ApplyProfileSuggestionButton({
+  actionLabel = "Apply",
   insightId,
   suggestionIndex,
 }: ApplyProfileSuggestionButtonProps) {
@@ -49,7 +51,7 @@ export function ApplyProfileSuggestionButton({
         aria-describedby={message ? messageId : undefined}
         className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950"
       >
-        {isPending ? "Applying..." : "Apply"}
+        {isPending ? "Applying..." : actionLabel}
       </button>
       {message && (
         <p
