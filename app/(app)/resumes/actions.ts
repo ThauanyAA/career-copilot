@@ -29,6 +29,10 @@ export type AddReusableAnswerSuggestionFormState = {
   error: string | null;
   message: string | null;
 };
+export type MarkResumeInsightReviewedFormState = {
+  error: string | null;
+  reviewedAt: number | null;
+};
 
 const ResumeSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -51,6 +55,9 @@ const AddReusableAnswerSuggestionSchema = z.object({
     .regex(/^\d+$/)
     .transform(Number)
     .pipe(z.number().int().min(0).max(3)),
+});
+const MarkResumeInsightReviewedSchema = z.object({
+  insightId: z.string().uuid(),
 });
 
 function getRedirectPath(error: string) {
@@ -77,6 +84,15 @@ function getAddReusableAnswerSuggestionState({
     addedAt: null,
     error: error ?? null,
     message: message ?? null,
+  };
+}
+
+function getMarkResumeInsightReviewedState(
+  error: string
+): MarkResumeInsightReviewedFormState {
+  return {
+    error,
+    reviewedAt: null,
   };
 }
 
@@ -501,5 +517,54 @@ export async function addResumeReusableAnswerSuggestion(
     addedAt: Date.now(),
     error: null,
     message: "Added to answers.",
+  };
+}
+
+export async function markResumeInsightReviewed(
+  _previousState: MarkResumeInsightReviewedFormState,
+  formData: FormData
+): Promise<MarkResumeInsightReviewedFormState> {
+  const parsedForm = MarkResumeInsightReviewedSchema.safeParse({
+    insightId: formData.get("insightId"),
+  });
+
+  if (!parsedForm.success) {
+    return getMarkResumeInsightReviewedState(
+      "Choose a valid resume insight to mark as reviewed."
+    );
+  }
+
+  const { supabase, userId } = await getAuthenticatedUserId();
+  const { data, error } = await supabase
+    .from("resume_insights")
+    .update({ status: "reviewed" })
+    .eq("id", parsedForm.data.insightId)
+    .eq("user_id", userId)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Resume insight mark reviewed error:", {
+      code: error.code,
+      message: error.message,
+    });
+
+    return getMarkResumeInsightReviewedState(
+      "Unable to mark this resume insight as reviewed right now."
+    );
+  }
+
+  if (!data) {
+    return getMarkResumeInsightReviewedState(
+      "This resume insight is no longer available to mark as reviewed."
+    );
+  }
+
+  revalidatePath("/resumes");
+
+  return {
+    error: null,
+    reviewedAt: Date.now(),
   };
 }

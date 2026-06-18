@@ -10,6 +10,7 @@ import { AddReusableAnswerSuggestionButton } from "./AddReusableAnswerSuggestion
 import { AnalyzeResumeButton } from "./AnalyzeResumeButton";
 import { ApplyProfileSuggestionButton } from "./ApplyProfileSuggestionButton";
 import { FormSubmitButton } from "@/components/FormSubmitButton";
+import { MarkResumeInsightReviewedButton } from "./MarkResumeInsightReviewedButton";
 import {
   getProfileSuggestionApplyState,
   type CandidateProfileRow,
@@ -366,11 +367,14 @@ function ResumeInsightPreviewSection({
   if (!insight.result) {
     return (
       <section className="border-t border-zinc-100 py-5 dark:border-zinc-800">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
-            Latest insight
-          </h4>
-          <InsightStatusBadge status={insight.row.status} />
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+              Latest insight
+            </h4>
+            <InsightStatusBadge status={insight.row.status} />
+          </div>
+          <MarkReviewedAction insight={insight} />
         </div>
         <p className="break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
           {insight.row.summary}
@@ -393,9 +397,12 @@ function ResumeInsightPreviewSection({
           </h4>
           <InsightStatusBadge status={insight.row.status} />
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Updated {new Date(insight.row.updated_at).toLocaleDateString()}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Updated {new Date(insight.row.updated_at).toLocaleDateString()}
+          </p>
+          <MarkReviewedAction insight={insight} />
+        </div>
       </div>
 
       <div className="space-y-5">
@@ -536,6 +543,14 @@ function ResumeInsightPreviewSection({
       </div>
     </section>
   );
+}
+
+function MarkReviewedAction({ insight }: { insight: ResumeInsightPreview }) {
+  if (insight.row.status !== "draft") {
+    return null;
+  }
+
+  return <MarkResumeInsightReviewedButton insightId={insight.row.id} />;
 }
 
 function InsightStatusBadge({
