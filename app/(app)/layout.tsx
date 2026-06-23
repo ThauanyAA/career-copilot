@@ -7,8 +7,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/profile", label: "Profile" },
   { href: "/resumes", label: "Resumes" },
-  { href: "/answers", label: "Reusable Answers" },
-  { href: "/applications/new", label: "New Application" },
+  { href: "/answers", label: "Saved Answers" },
+  { href: "/applications/new", label: "Application Prep" },
 ];
 
 export default async function ProtectedAppLayout({
