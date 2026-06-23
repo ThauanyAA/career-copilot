@@ -1,6 +1,6 @@
 import {
+  CollapsiblePreviewSection,
   EmptyPreviewText,
-  PreviewBlock,
   PreviewReason,
 } from "./ResumeInsightPreviewPrimitives";
 import type { ResumeInsightResult } from "@/types/resumeIntelligence";
@@ -11,7 +11,10 @@ export function MissingInfoSection({
   questions: ResumeInsightResult["missingInfoQuestions"];
 }) {
   return (
-    <PreviewBlock title="Missing info questions">
+    <CollapsiblePreviewSection
+      count={questions.length}
+      title="Missing info questions"
+    >
       {questions.length === 0 ? (
         <EmptyPreviewText>No missing info questions yet.</EmptyPreviewText>
       ) : (
@@ -26,6 +29,6 @@ export function MissingInfoSection({
           ))}
         </div>
       )}
-    </PreviewBlock>
+    </CollapsiblePreviewSection>
   );
 }

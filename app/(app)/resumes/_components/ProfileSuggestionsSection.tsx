@@ -1,7 +1,7 @@
 import type { CandidateProfileRow } from "../profileSuggestionApply";
 import {
+  CollapsiblePreviewSection,
   EmptyPreviewText,
-  PreviewBlock,
 } from "./ResumeInsightPreviewPrimitives";
 import { ProfileSuggestionItem } from "./ProfileSuggestionItem";
 import type { ResumeInsightPreview } from "./types";
@@ -17,7 +17,10 @@ export function ProfileSuggestionsSection({
   suggestions: ResumeInsightResult["profileSuggestions"];
 }) {
   return (
-    <PreviewBlock title="Profile suggestions">
+    <CollapsiblePreviewSection
+      count={suggestions.length}
+      title="Profile suggestions"
+    >
       {suggestions.length === 0 ? (
         <EmptyPreviewText>No profile suggestions yet.</EmptyPreviewText>
       ) : (
@@ -33,6 +36,6 @@ export function ProfileSuggestionsSection({
           ))}
         </div>
       )}
-    </PreviewBlock>
+    </CollapsiblePreviewSection>
   );
 }

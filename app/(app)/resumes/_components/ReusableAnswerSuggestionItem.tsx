@@ -8,6 +8,7 @@ import {
   formatFieldName,
   PreviewReason,
   SourceSnippet,
+  SupportingDetails,
 } from "./ResumeInsightPreviewPrimitives";
 import type { ResumeInsightPreview } from "./types";
 import type { ResumeInsightResult } from "@/types/resumeIntelligence";
@@ -41,17 +42,19 @@ export function ReusableAnswerSuggestionItem({
           <p className="mt-1 break-words text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
             {formatFieldName(suggestion.category)}
           </p>
-          <p className="mt-2 break-words text-sm font-medium text-zinc-900 dark:text-white">
-            Question:{" "}
-            <span className="font-normal text-zinc-700 dark:text-zinc-200">
-              {suggestion.question}
-            </span>
-          </p>
-          <p className="mt-1 break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+          <p className="mt-2 break-words text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
             {suggestion.answer}
           </p>
-          <PreviewReason reason={suggestion.reason} />
-          <SourceSnippet snippet={suggestion.sourceSnippet} />
+          <SupportingDetails>
+            <p className="break-words text-sm font-medium text-zinc-900 dark:text-white">
+              Question:{" "}
+              <span className="font-normal text-zinc-700 dark:text-zinc-200">
+                {suggestion.question}
+              </span>
+            </p>
+            <PreviewReason reason={suggestion.reason} />
+            <SourceSnippet snippet={suggestion.sourceSnippet} />
+          </SupportingDetails>
         </div>
         {applyState.status === "ready" ? (
           <AddReusableAnswerSuggestionButton

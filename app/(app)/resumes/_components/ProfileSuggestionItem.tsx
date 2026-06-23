@@ -10,6 +10,7 @@ import {
   PreviewEvidenceType,
   PreviewReason,
   SourceSnippet,
+  SupportingDetails,
 } from "./ResumeInsightPreviewPrimitives";
 import type { ResumeInsightPreview } from "./types";
 import type { ResumeInsightResult } from "@/types/resumeIntelligence";
@@ -44,8 +45,10 @@ export function ProfileSuggestionItem({
             </span>
           </p>
           <PreviewReason reason={suggestion.reason} />
-          <PreviewEvidenceType evidenceType={suggestion.evidenceType} />
-          <SourceSnippet snippet={suggestion.sourceSnippet} />
+          <SupportingDetails label="Evidence">
+            <PreviewEvidenceType evidenceType={suggestion.evidenceType} />
+            <SourceSnippet snippet={suggestion.sourceSnippet} />
+          </SupportingDetails>
         </div>
         {applyState.status === "ready" ? (
           <ApplyProfileSuggestionButton

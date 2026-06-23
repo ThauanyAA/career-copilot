@@ -1,7 +1,7 @@
 import type { ReusableAnswerDuplicateCandidate } from "../reusableAnswerSuggestionApply";
 import {
+  CollapsiblePreviewSection,
   EmptyPreviewText,
-  PreviewBlock,
 } from "./ResumeInsightPreviewPrimitives";
 import { ReusableAnswerSuggestionItem } from "./ReusableAnswerSuggestionItem";
 import type { ResumeInsightPreview } from "./types";
@@ -17,7 +17,10 @@ export function ReusableAnswerSuggestionsSection({
   suggestions: ResumeInsightResult["reusableAnswerSuggestions"];
 }) {
   return (
-    <PreviewBlock title="Reusable answer suggestions">
+    <CollapsiblePreviewSection
+      count={suggestions.length}
+      title="Reusable answer suggestions"
+    >
       {suggestions.length === 0 ? (
         <EmptyPreviewText>No reusable answer suggestions yet.</EmptyPreviewText>
       ) : (
@@ -33,6 +36,6 @@ export function ReusableAnswerSuggestionsSection({
           ))}
         </div>
       )}
-    </PreviewBlock>
+    </CollapsiblePreviewSection>
   );
 }
