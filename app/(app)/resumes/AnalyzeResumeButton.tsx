@@ -1,22 +1,31 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 type AnalyzeResumeButtonProps = {
   resumeId: string;
 };
 
+const ANALYZE_ERROR_MESSAGE =
+  "We couldn't analyze this resume right now. Please try again.";
+
 export function AnalyzeResumeButton({ resumeId }: AnalyzeResumeButtonProps) {
   const router = useRouter();
   const statusId = useId();
+  const isRequestInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const statusMessage = isPending
-    ? "Analyzing your resume. This may take about a minute."
+    ? "Analyzing your resume. This can take about a minute."
     : error;
 
   async function handleAnalyze() {
+    if (isRequestInFlight.current) {
+      return;
+    }
+
+    isRequestInFlight.current = true;
     setError(null);
     setIsPending(true);
 
@@ -26,21 +35,14 @@ export function AnalyzeResumeButton({ resumeId }: AnalyzeResumeButtonProps) {
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-
-        throw new Error(payload?.error ?? "Unable to analyze this resume.");
+        throw new Error(ANALYZE_ERROR_MESSAGE);
       }
 
       router.refresh();
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Unable to analyze this resume."
-      );
+    } catch {
+      setError(ANALYZE_ERROR_MESSAGE);
     } finally {
+      isRequestInFlight.current = false;
       setIsPending(false);
     }
   }
@@ -54,7 +56,7 @@ export function AnalyzeResumeButton({ resumeId }: AnalyzeResumeButtonProps) {
         aria-describedby={statusMessage ? statusId : undefined}
         className="rounded-lg border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950"
       >
-        {isPending ? "Analyzing..." : "Analyze resume"}
+        {isPending ? "Analyzing resume..." : "Analyze resume"}
       </button>
       {statusMessage && (
         <p
