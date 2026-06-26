@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { deleteResume, markResumePrimary } from "../actions";
+import { markResumePrimary } from "../actions";
 import { AnalyzeResumeButton } from "../AnalyzeResumeButton";
 import type { CandidateProfileRow } from "../profileSuggestionApply";
 import type { ReusableAnswerDuplicateCandidate } from "../reusableAnswerSuggestionApply";
 import { FormSubmitButton } from "@/components/FormSubmitButton";
+import { DeleteResumeForm } from "./DeleteResumeForm";
 import { ResumeInsightPanel } from "./ResumeInsightPanel";
 import type { Resume, ResumeInsightPreview } from "./types";
 
@@ -58,15 +59,7 @@ export function ResumeCard({
             Edit
           </Link>
           <AnalyzeResumeButton resumeId={resume.id} />
-          <form action={deleteResume}>
-            <input type="hidden" name="id" value={resume.id} />
-            <FormSubmitButton
-              className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
-              pendingLabel="Deleting..."
-            >
-              Delete
-            </FormSubmitButton>
-          </form>
+          <DeleteResumeForm resumeId={resume.id} />
         </div>
       </div>
 
