@@ -1,13 +1,9 @@
-import {
-  deleteResume,
-  markResumePrimary,
-  updateResume,
-} from "../actions";
+import Link from "next/link";
+import { deleteResume, markResumePrimary } from "../actions";
 import { AnalyzeResumeButton } from "../AnalyzeResumeButton";
 import type { CandidateProfileRow } from "../profileSuggestionApply";
 import type { ReusableAnswerDuplicateCandidate } from "../reusableAnswerSuggestionApply";
 import { FormSubmitButton } from "@/components/FormSubmitButton";
-import { ResumeForm } from "./ResumeForm";
 import { ResumeInsightPanel } from "./ResumeInsightPanel";
 import type { Resume, ResumeInsightPreview } from "./types";
 
@@ -55,6 +51,12 @@ export function ResumeCard({
               </FormSubmitButton>
             </form>
           )}
+          <Link
+            href={`/resumes/${resume.id}/edit`}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            Edit
+          </Link>
           <AnalyzeResumeButton resumeId={resume.id} />
           <form action={deleteResume}>
             <input type="hidden" name="id" value={resume.id} />
@@ -73,12 +75,6 @@ export function ResumeCard({
         existingReusableAnswers={existingReusableAnswers}
         insight={insight}
         isOutdated={isInsightOutdated}
-      />
-
-      <ResumeForm
-        action={updateResume}
-        resume={resume}
-        submitLabel="Update resume"
       />
     </article>
   );
