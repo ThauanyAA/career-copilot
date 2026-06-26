@@ -189,6 +189,70 @@ export const ResumeProfileSuggestionsResultSchema = z.object({
   profileSuggestions: z.array(ResumeProfileSuggestionSchema).max(6),
 });
 
+const SensitiveResumeProfileSuggestionFieldSchema = z.enum([
+  "salary_expectation",
+  "notice_period",
+  "work_authorization",
+  "relocation_preference",
+]);
+
+type SanitizedProfileSuggestionsResult = {
+  droppedCount: number;
+  profileSuggestions: ResumeProfileSuggestion[];
+};
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function hasExplicitSensitiveSuggestionEvidence(
+  suggestion: Record<string, unknown>
+) {
+  return (
+    suggestion.evidenceType === "explicit_resume_text" &&
+    typeof suggestion.sourceSnippet === "string" &&
+    suggestion.sourceSnippet.trim().length > 0
+  );
+}
+
+export function sanitizeProfileSuggestions(
+  suggestions: unknown[]
+): SanitizedProfileSuggestionsResult {
+  const profileSuggestions: ResumeProfileSuggestion[] = [];
+  let droppedCount = 0;
+
+  for (const suggestion of suggestions) {
+    if (!isObjectRecord(suggestion)) {
+      droppedCount += 1;
+      continue;
+    }
+
+    const sensitiveField = SensitiveResumeProfileSuggestionFieldSchema.safeParse(
+      suggestion.field
+    );
+
+    if (
+      sensitiveField.success &&
+      !hasExplicitSensitiveSuggestionEvidence(suggestion)
+    ) {
+      droppedCount += 1;
+      continue;
+    }
+
+    const parsedSuggestion =
+      ResumeProfileSuggestionSchema.safeParse(suggestion);
+
+    if (!parsedSuggestion.success) {
+      droppedCount += 1;
+      continue;
+    }
+
+    profileSuggestions.push(parsedSuggestion.data);
+  }
+
+  return { droppedCount, profileSuggestions };
+}
+
 export const ResumeReusableAnswersAndMissingInfoResultSchema = z.object({
   reusableAnswerSuggestions: z
     .array(ResumeReusableAnswerSuggestionSchema)
