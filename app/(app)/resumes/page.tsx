@@ -1,15 +1,17 @@
-import { redirect } from "next/navigation";
-import { createResume } from "./actions";
+import Link from "next/link";
 import { ResumeCard } from "./_components/ResumeCard";
-import { ResumeForm } from "./_components/ResumeForm";
 import { ResumeHeader } from "./_components/ResumeHeader";
 import type { ResumeInsightPreview } from "./_components/types";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedResumeUser } from "./_lib/auth";
 import {
   ResumeInsightResultSchema,
   type ResumeInsightResult,
 } from "@/types/resumeIntelligence";
 import { calculateResumeContentHash } from "@/ai/resumeIntelligence/hash";
+
+type ResumeSupabaseClient = Awaited<
+  ReturnType<typeof getAuthenticatedResumeUser>
+>["supabase"];
 
 type ResumesPageProps = {
   searchParams: Promise<{
@@ -22,19 +24,7 @@ type ResumesPageProps = {
 };
 
 export default async function ResumesPage({ searchParams }: ResumesPageProps) {
-  const supabase = await createClient();
-  const { data: claimsData, error: authError } =
-    await supabase.auth.getClaims();
-
-  if (authError || !claimsData?.claims) {
-    redirect("/login");
-  }
-
-  const userId = claimsData.claims.sub;
-
-  if (typeof userId !== "string") {
-    redirect("/login");
-  }
+  const { supabase, userId } = await getAuthenticatedResumeUser();
 
   const { data: resumeRows, error } = await supabase
     .from("resumes")
@@ -125,15 +115,8 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
           </p>
         )}
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-            Add a resume
-          </h2>
-          <ResumeForm action={createResume} submitLabel="Save resume" />
-        </section>
-
         <section className="mt-8">
-          <div className="mb-4 flex items-end justify-between gap-4">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
                 Saved resumes
@@ -144,6 +127,12 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
                   : `${resumes.length} saved`}
               </p>
             </div>
+            <Link
+              href="/resumes/new"
+              className="w-fit rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
+              Add resume
+            </Link>
           </div>
 
           {loadError ? null : resumes.length === 0 ? (
@@ -188,7 +177,7 @@ async function loadLatestInsightsByResumeId({
   userId,
 }: {
   resumeIds: string[];
-  supabase: Awaited<ReturnType<typeof createClient>>;
+  supabase: ResumeSupabaseClient;
   userId: string;
 }) {
   const insightsByResumeId = new Map<string, ResumeInsightPreview>();
