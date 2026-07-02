@@ -8,6 +8,49 @@ import { DeleteResumeForm } from "./DeleteResumeForm";
 import { ResumeInsightPanel } from "./ResumeInsightPanel";
 import type { Resume, ResumeInsightPreview } from "./types";
 
+type ResumeInsightStatus = {
+  label: "No insight" | "Insight ready" | "Outdated" | "Reviewed";
+  className: string;
+};
+
+function getResumeInsightStatus({
+  insight,
+  isInsightOutdated,
+}: {
+  insight?: ResumeInsightPreview;
+  isInsightOutdated: boolean;
+}): ResumeInsightStatus {
+  if (!insight) {
+    return {
+      label: "No insight",
+      className:
+        "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+    };
+  }
+
+  if (isInsightOutdated) {
+    return {
+      label: "Outdated",
+      className:
+        "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-200",
+    };
+  }
+
+  if (insight.row.status === "reviewed") {
+    return {
+      label: "Reviewed",
+      className:
+        "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200",
+    };
+  }
+
+  return {
+    label: "Insight ready",
+    className:
+      "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200",
+  };
+}
+
 export function ResumeCard({
   currentProfile,
   existingReusableAnswers,
@@ -21,6 +64,8 @@ export function ResumeCard({
   isInsightOutdated: boolean;
   resume: Resume;
 }) {
+  const insightStatus = getResumeInsightStatus({ insight, isInsightOutdated });
+
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -34,6 +79,11 @@ export function ResumeCard({
                 Primary
               </span>
             )}
+            <span
+              className={`rounded-md px-2 py-1 text-xs font-medium ${insightStatus.className}`}
+            >
+              {insightStatus.label}
+            </span>
           </div>
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
             Updated {new Date(resume.updated_at).toLocaleDateString()}
