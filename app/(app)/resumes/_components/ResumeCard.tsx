@@ -69,7 +69,7 @@ export function ResumeCard({
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-zinc-900 dark:text-white">
               {resume.title}
@@ -90,7 +90,7 @@ export function ResumeCard({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-start gap-2 sm:shrink-0 sm:justify-end">
           {!resume.is_primary && (
             <form action={markResumePrimary}>
               <input type="hidden" name="id" value={resume.id} />
